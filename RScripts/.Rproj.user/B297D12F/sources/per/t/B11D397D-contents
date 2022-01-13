@@ -1,0 +1,220 @@
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~Mic-2-P~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~Project proposal - Theoretical background~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
+#Libraries
+library(ggplot2)
+library(dplyr)
+library(reshape)
+library(deSolve)
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
+#ggplot theme
+theme_min<-theme(axis.text.x=element_text(vjust=0.2, size=18, colour="black"),
+                 axis.text.y=element_text(hjust=0.2, size=18, colour="black"),
+                 axis.title=element_text(size=28, colour="black"),
+                 axis.line=element_line(size=0.5, colour="black"),
+                 strip.text=element_text(size=18, face="bold"),
+                 axis.ticks=element_line(size=1, colour="black"),
+                 #axis.ticks.length=unit(-0.05, "cm"),
+                 panel.background=element_rect(colour="black", fill="white"),
+                 panel.grid=element_line(linetype=0),
+                 legend.text=element_text(size=28, colour="black"),
+                 legend.title=element_text(size=14, colour="black"),
+                 legend.position=c("right"),
+                 legend.key.size=unit(1, "cm"),
+                 strip.background=element_rect(fill="grey98", colour="black"),
+                 legend.key=element_rect(fill="white", size=1.2),
+                 legend.spacing=unit(0.5, "cm"),
+                 plot.title=element_text(size=18, face="bold", hjust=-0.05))
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
+
+#=============================================================================================================#
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~Microbial pools dynamic~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
+#=============================================================================================================#
+#===========Model simulations with the death rate accounted for
+#Model
+M2P<-function(time, Y, pars){
+  #Pools
+  Substrate = Y[1]
+  e = Y[2]
+  X1 = Y[3]
+  CO2 = Y[4]
+  #Parameters
+  yA = pars[1]
+  Km = pars[2]
+  v = pars[3]
+  m = pars[4]
+  g = pars[5]
+  d = pars[6]
+  ce = pars[7]
+  #nX1 = pars[8]
+  MX1 = ce/4
+  #scaling function
+  f = Substrate/(Km + Substrate)
+  #Fluxes
+  uptake = (v*ce/yA)*(X1^(2/3))*f
+  growth = (v*e*(X1^(-1/3)) - m*g)/(e + g)
+  death = d*X1
+  #Microbial biomass
+  B = (MX1 + ce*e)*X1
+  
+  #Derivatives
+  dSubstrate = -uptake
+  de = v*(X1^(-1/3))*(f - e)
+  dX1 = growth*X1 - death
+  dCO2 = uptake*(1 - yA) + ce*(X1*e*(v*X1^(-1/3)-growth+d)) - growth*X1*MX1
+  
+  return(list(c(dSubstrate, de, dX1, dCO2), B = B))
+}
+#Model parameters
+p = c(yA = 1,
+      Km = mean(parsAll$Km, na.rm = T),
+      v = mean(parsAll$v, na.rm = T), 
+      m = mean(parsAll$m, na.rm = T),
+      g = mean(parsAll$g, na.rm = T),
+      d = 0.01,
+      ce = mean(parsAll$ce, na.rm = T))
+#Time
+t = seq(0, 5, by = 0.01)
+
+#Initial states: X1 = 10 umol/g (10*4/ce); e = 0.01, 0.1, S = 25 umolg/g
+sim1<-data.frame(Substrate = numeric(), e = numeric(), X1 = numeric(), CO2 = numeric(), B = numeric(),
+                 e_i = numeric())
+for(i in c(0.01, 0.1)){#e
+ 
+    out <- as.data.frame(ode(y = c(Substrate = 25, e = i, X1 = 12.37074, CO2 = 0), M2P, times = t, parms = p))
+    out$e_i <- c(i)
+    sim1 <- rbind(sim1, out)
+  
+}
+sim1$Legend <- c("Dying")
+ggplot(sim1, aes(time, X1)) + geom_line(aes(color = factor(e_i))) + theme_min
+ggplot(sim1, aes(time, e)) + geom_line(aes(color = factor(e_i))) + theme_min
+ggplot(sim1, aes(time, B.ce)) + geom_line(aes(color = factor(e_i))) + theme_min
+
+#===========Model simulations without the death rate
+M2P2<-function(time, Y, pars){
+  #Pools
+  Substrate = Y[1]
+  e = Y[2]
+  X1 = Y[3]
+  CO2 = Y[4]
+  #Parameters
+  yA = pars[1]
+  Km = pars[2]
+  v = pars[3]
+  m = pars[4]
+  g = pars[5]
+  #d = pars[6]
+  ce = pars[6]
+  #nX1 = pars[8]
+  MX1 = ce/4
+  #scaling function
+  f = Substrate/(Km + Substrate)
+  #Fluxes
+  uptake = (v*ce/yA)*(X1^(2/3))*f
+  growth = (v*e*(X1^(-1/3)) - m*g)/(e + g)
+  #death = d*X1
+  #Microbial biomass
+  B = (MX1 + ce*e)*X1
+  
+  #Derivatives
+  dSubstrate = -uptake
+  de = v*(X1^(-1/3))*(f - e)
+  dX1 = growth*X1 #- death
+  dCO2 = uptake*(1 - yA) + ce*(X1*e*(v*X1^(-1/3)-growth)) - growth*X1*MX1
+  
+  return(list(c(dSubstrate, de, dX1, dCO2), B = B))
+}
+sim2<-data.frame(Substrate = numeric(), e = numeric(), X1 = numeric(), CO2 = numeric(), B = numeric(),
+                 e_i = numeric())
+p2 <- p[c(1:5, 7)]
+
+for(i in c(0.01, 0.1)){#e
+  
+  out <- as.data.frame(ode(y = c(Substrate = 25, e = i, X1 = 12.37074, CO2 = 0), M2P2, times = t, parms = p2))
+  out$e_i <- c(i)
+  sim2 <- rbind(sim2, out)
+  
+}
+sim2$Legend <- c("Metabolizing")
+ggplot(sim2, aes(time, X1)) + geom_line(aes(color = factor(e_i))) + theme_min
+ggplot(sim2, aes(time, e)) + geom_line(aes(color = factor(e_i))) + theme_min
+ggplot(sim2, aes(time, B.ce)) + geom_line(aes(color = factor(e_i))) + theme_min
+
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~Resulting plots~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
+sim <- rbind(sim1, sim2) 
+#X1
+ggplot(sim[sim$e_i == 0.01, ], aes(time, X1)) + geom_line(aes(linetype = Legend), lwd = 1.2, color= "grey60", show.legend = F) + 
+  geom_line(data = sim[sim$e_i == 0.1, ], aes(x = time, y = X1, linetype = Legend), lwd = 1.2, show.legend = F) + theme_min + 
+  ylab(expression(paste(italic(X[1])))) + xlab("Time") +
+  theme(axis.text.x = element_blank(), axis.text.y = element_blank(), legend.title = element_blank(),
+        legend.position = c(0.2, 0.9)) + ggtitle("B)")
+#e
+ggplot(sim[sim$e_i == 0.01, ], aes(time, e)) + geom_line(aes(linetype = Legend), lwd = 1.2, color= "grey60", show.legend = F) + 
+  geom_line(data = sim[sim$e_i == 0.1, ], aes(x = time, y = e, linetype = Legend), lwd = 1.2, show.legend = F) + theme_min + 
+  ylab(expression(paste(italic(e)))) + xlab("Time") +
+  theme(axis.text.x = element_blank(), axis.text.y = element_blank(), legend.title = element_blank(),
+        legend.position = c(0.6, 0.8)) + ggtitle("C)")
+#Biomass
+ggplot(sim[sim$e_i == 0.01, ], aes(time, B.ce)) + geom_line(aes(linetype = Legend), lwd = 1.2, color= "grey60") + 
+  geom_line(data = sim[sim$e_i == 0.1, ], aes(x = time, y = B.ce, linetype = Legend), lwd = 1.2) + theme_min + 
+  ylab("Biomass") + xlab("Time") +
+  theme(axis.text.x = element_blank(), axis.text.y = element_blank(), legend.title = element_blank(),
+        legend.position = c(0.7, 0.8)) + ggtitle("D)")
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
+
+#=============================================================================================================#
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~Microbial proxy-parameters dynamic~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
+#=============================================================================================================#
+proxy <- sim[(sim$Legend == "Dying" & sim$e_i == 0.1), ]
+#kec factor 
+proxy$kec <- with(proxy, (0.25*0.31 + e)/(0.25 + e))
+#kDNA factor
+proxy$kDNA <- with(proxy, 0.25*0.015/(0.25 + e))
+#Chloroform flush
+proxy$Flush <- with(proxy, kec*B.ce)
+#DNA
+proxy$DNA <- with(proxy, kDNA*B.ce)
+#Chloroform flush based biomass estimation applying kec = 0.45
+proxy$BiomassFlush <- with(proxy, Flush/0.45)
+#DNA based biomass estimation applying kDNA = 0.001
+proxy$BiomassDNA <- with(proxy, DNA/0.012)
+
+#====================Biomass
+Proxy <- melt(proxy[, c("time", "B.ce", "BiomassFlush", "BiomassDNA")], id.vars = "time")
+Proxy$Legend <- character(length = nrow(Proxy))
+for(i in 1:nrow(Proxy)){
+  if(Proxy$variable[i] == "B.ce"){
+    Proxy$Legend[i] <- c("Actual biomass")
+  }else{
+    if(Proxy$variable[i] == "BiomassFlush"){
+      Proxy$Legend[i] <- c("Estimate: Chloroform flush")
+    }else{
+      Proxy$Legend[i] <- c("Estimate: DNA")
+    }
+  }
+}
+
+ggplot(Proxy, aes(time, value)) + geom_line(lwd = 1.2, aes(color = Legend)) + 
+  ylab("Biomass") + xlab("Time") + theme_min + scale_color_manual(values = c("black", "grey60", "grey80")) + 
+  theme(axis.text.x = element_blank(), axis.text.y = element_blank(), legend.title = element_blank(),
+        legend.position = c(0.55, 0.855), legend.text = element_text(size=24, colour="black")) + ggtitle("B)")
+
+#====================kec
+ggplot(proxy, aes(time, kec)) + geom_line(lwd = 1.2) + 
+  ylab(expression(paste(italic(k[EC])~factor))) + xlab("Time") + theme_min + 
+  geom_hline(yintercept = 0.45, lwd = 1, lty = 2) +
+  theme(axis.text.x = element_blank(), legend.title = element_blank(),
+        legend.position = c(0.55, 0.65), legend.text = element_text(size=24, colour="black")) + ggtitle("C)")
+
+#====================kDNA
+ggplot(proxy, aes(time, kDNA)) + geom_line(lwd = 1.2) + 
+  ylab(expression(paste(italic(k[DNA])~factor))) + xlab("Time") + theme_min + 
+  geom_hline(yintercept = 0.012, lwd = 1, lty = 2) +
+  theme(axis.text.x = element_blank(), legend.title = element_blank(),
+        legend.position = c(0.55, 0.65), legend.text = element_text(size=24, colour="black")) + ggtitle("A)")
+
+#===================e vs specific growth rate relationship
+ggplot(data.frame(x = seq(0, 1, by = 0.01), y = (p[["v"]]*seq(0, 1, by = 0.01) - p[["m"]]*p[["g"]])/(p[["g"]] + seq(0, 1, by = 0.01))), aes(x, y)) + 
+  geom_line(lwd = 1.2) + ylab(expression(paste(mu))) + xlab(expression(paste(italic(e)))) + theme_min +
+  scale_y_continuous(limits = c(0, 3), breaks = c(0, 0.5,1, 1.5, 2, 2.5, 3))

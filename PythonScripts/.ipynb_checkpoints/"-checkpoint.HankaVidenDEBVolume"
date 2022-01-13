@@ -1,0 +1,338 @@
+{
+ "cells": [
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "# Testing the DEB model\n",
+    "## Santruckova et al. (unpublished data)\n",
+    "1. Importing libraries"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 52,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "import numpy as np\n",
+    "import pandas as pd\n",
+    "from scipy.integrate import odeint\n",
+    "from scipy.optimize import dual_annealing\n",
+    "from scipy.optimize import differential_evolution"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "2. Defining DEB model"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 96,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "def DEBmodel (y, t, pars):\n",
+    "    #define initial pools\n",
+    "    S=y[0];    e=y[1];    X1=y[2];     CO2=y[3]\n",
+    "    #define parameters\n",
+    "    yA=pars[0]; \n",
+    "    Km=pars[1];     \n",
+    "    v=pars[2];\n",
+    "    m=pars[3]; \n",
+    "    g=pars[4]; \n",
+    "    ce=pars[5];\n",
+    "    MX1=ce/4;\n",
+    "    #Define fluxes\n",
+    "    ##scaling function for substrate\n",
+    "    f=S/(Km+S)\n",
+    "    uptake=(v*ce/yA)*X1*f\n",
+    "    growth = (v*e-m*g)/(e+g)\n",
+    "    #Define derivatives\n",
+    "    dSdt = -uptake\n",
+    "    dedt = v*(f - e)\n",
+    "    dX1dt = X1*growth \n",
+    "    dCO2dt = uptake*(1 - yA) + ce*(X1*e*(v-growth)) - growth*X1*MX1\n",
+    "    return dSdt, dedt, dX1dt, dCO2dt;"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "3. Defining outputs from DEB model"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 97,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "def calcDEB (model, pars, t, y0):\n",
+    "    #model parameters\n",
+    "    pars_model=pars[0:6]\n",
+    "    #conversion factors\n",
+    "    conversions=pars[5:7]\n",
+    "    \n",
+    "    #solve the model\n",
+    "    y=odeint(model,y0,t, args=(pars_model,))\n",
+    "    #calculate B, WallsProto,\n",
+    "    B=((conversions[0]/4 + conversions[0]*y[:, 1])*y[:, 2])\n",
+    "    WallsProto = (conversions[1]*conversions[0]/4)/(conversions[0]*y[:, 1])\n",
+    "    #Create data with predictions\n",
+    "    yhat = np.concatenate((y[:, 3].reshape(len(d.Time),1),#CO2\n",
+    "                           B.reshape(len(d.Time),1),\n",
+    "                           WallsProto.reshape(len(d.Time),1)), axis=1)\n",
+    "    \n",
+    "    return yhat"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "4. Defining objective function"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 98,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "def obj_funDEB (x):\n",
+    "    #define parameters\n",
+    "    pars = x\n",
+    "    #initial conditions\n",
+    "    S_i = d.Sinit[0]\n",
+    "    e_i =pars[6]/4/d.WP[0]\n",
+    "    X1_i = d.B[0]/(pars[5]*(0.25 + e_i))\n",
+    "    \n",
+    "    y0 = np.array([S_i, e_i, X1_i, 0])\n",
+    "    #times\n",
+    "    t = d.Time\n",
+    "    #model simulations\n",
+    "    yhat_full = calcDEB(DEBmodel, pars, t, y0)\n",
+    "    #observations\n",
+    "    obs=np.concatenate((np.array([d.Rc]).reshape(len(d.Time),1),\n",
+    "                           np.array([d.B]).reshape(len(d.Time),1),\n",
+    "                           np.array([d.WP]).reshape(len(d.Time),1)), axis=1)\n",
+    "    #weights\n",
+    "    weights=np.concatenate((np.nanmean(d.Rc).repeat(len(d.Time)).reshape(len(d.Time),1),\n",
+    "                            np.nanmean(d.B).repeat(len(d.Time)).reshape(len(d.Time),1),\n",
+    "                            np.nanmean((d.WP)).repeat(len(d.Time)).reshape(len(d.Time),1)),\n",
+    "                       axis=1)\n",
+    "    out=np.nansum(((yhat_full-obs)/weights)**2)\n",
+    "    return out"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "5. Calculate the goodness of fit"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 99,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "def goodnessDEB (x):\n",
+    "    #define parameters\n",
+    "    pars = x\n",
+    "    #initial conditions\n",
+    "    S_i = d.Sinit[0]\n",
+    "    e_i =pars[6]/4/d.WP[0]\n",
+    "    X1_i = d.B[0]/(pars[5]*(0.25 + e_i))\n",
+    "    \n",
+    "    y0 = np.array([S_i, e_i, X1_i, 0])\n",
+    "    #times\n",
+    "    t = d.Time\n",
+    "    #model simulations\n",
+    "    yhat_full = calcDEB(DEBmodel, pars, t, y0)\n",
+    "    #observations\n",
+    "    obs=np.concatenate((np.array([d.Rc]).reshape(len(d.Time),1),\n",
+    "                           np.array([d.B]).reshape(len(d.Time),1),\n",
+    "                           np.array([d.WP]).reshape(len(d.Time),1)), axis=1)\n",
+    "    \n",
+    "    R2=1-np.nansum((obs-yhat_full)**2)/np.nansum((obs-np.nanmean(obs))**2)\n",
+    "    ll=-np.nansum((obs-yhat_full)**2)/2/np.nanstd(obs)**2\n",
+    "    AIC = len(pars)*2 - 2*ll\n",
+    "    out = np.array([R2, ll, AIC])\n",
+    "    return out"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "6. Reading data"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 62,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "    Time  Sinit         Rc         B        WP\n",
+      "0    0.1  51.29   0.110000  2.130000  0.054500\n",
+      "1   24.0  51.29  15.831667  3.590000  0.359000\n",
+      "2   48.0  51.29  22.078333  3.723333  0.718833\n",
+      "3   72.0  51.29  24.503333  3.223333  0.624000\n",
+      "4   96.0  51.29  26.570000  2.593333  1.051833\n",
+      "5  120.0  51.29  27.845000  1.733333  0.496000\n"
+     ]
+    }
+   ],
+   "source": [
+    "d = pd.read_csv('/mnt/580CBE2464C5F83D/pracovni/data_statistika/SoilMBVariability/SoilMBVariabilityData/VidenSucrose.csv', sep=',')\n",
+    "print(d)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "7. Estimating parameters"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 100,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "<ipython-input-97-de0bdb1e2a70>:11: RuntimeWarning: invalid value encountered in true_divide\n",
+      "  WallsProto = (conversions[1]*conversions[0]/4)/(conversions[0]*y[:, 1])\n"
+     ]
+    }
+   ],
+   "source": [
+    "VidenSucroseP=dual_annealing(obj_funDEB, [(0.05, 1), (10, 1000),(0.001, 5), (1e-12, 0.1), (0.1, 3), (0.1, 10), (0, 1)])"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 101,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "     fun: 1.3422470297812668\n",
+      " message: ['Maximum number of iteration reached']\n",
+      "    nfev: 15593\n",
+      "    nhev: 0\n",
+      "     nit: 1000\n",
+      "    njev: 199\n",
+      "  status: 0\n",
+      " success: True\n",
+      "       x: array([3.68047903e-01, 1.00000000e+03, 2.88687650e-01, 6.57001818e-02,\n",
+      "       1.56792359e-01, 5.33970344e+00, 7.02231680e-02])\n",
+      "[ 0.91402596 -0.77376637 15.54753275]\n"
+     ]
+    }
+   ],
+   "source": [
+    "print(VidenSucroseP)\n",
+    "print(goodnessDEB(VidenSucroseP.x))"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 102,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "<ipython-input-97-de0bdb1e2a70>:11: RuntimeWarning: invalid value encountered in true_divide\n",
+      "  WallsProto = (conversions[1]*conversions[0]/4)/(conversions[0]*y[:, 1])\n"
+     ]
+    }
+   ],
+   "source": [
+    "VidenSucroseDE=differential_evolution(obj_funDEB, [(0.05, 1), (10, 1000),(0.001, 5), (1e-12, 0.1), (0.1, 3), (0.1, 10), (0, 1)])"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 103,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "     fun: 1.3433051171217874\n",
+      "     jac: array([-0.10011025,  0.02018273, -0.01517244, -0.13736838, -0.02262324,\n",
+      "        0.00281999, -0.02638474])\n",
+      " message: 'Optimization terminated successfully.'\n",
+      "    nfev: 14568\n",
+      "     nit: 135\n",
+      " success: True\n",
+      "       x: array([3.39112979e-01, 9.96733952e+02, 2.66077952e-01, 6.46552167e-02,\n",
+      "       1.48228389e-01, 6.67743078e+00, 7.05523871e-02])\n",
+      "[ 0.9139615  -0.77434649 15.54869297]\n"
+     ]
+    }
+   ],
+   "source": [
+    "print(VidenSucroseDE)\n",
+    "print(goodnessDEB(VidenSucroseDE.x))"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 106,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "np.savetxt('/mnt/580CBE2464C5F83D/pracovni/data_statistika/SoilMBVariability/PythonScripts/VidenSucroseParms.csv', VidenSucroseDE.x.reshape(1,7), delimiter=\",\")"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": []
+  }
+ ],
+ "metadata": {
+  "kernelspec": {
+   "display_name": "Python 3",
+   "language": "python",
+   "name": "python3"
+  },
+  "language_info": {
+   "codemirror_mode": {
+    "name": "ipython",
+    "version": 3
+   },
+   "file_extension": ".py",
+   "mimetype": "text/x-python",
+   "name": "python",
+   "nbconvert_exporter": "python",
+   "pygments_lexer": "ipython3",
+   "version": "3.8.10"
+  }
+ },
+ "nbformat": 4,
+ "nbformat_minor": 4
+}
