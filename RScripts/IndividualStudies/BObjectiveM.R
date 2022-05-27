@@ -1,0 +1,21 @@
+BObjectiveM<-function(x){
+  #==========================Extracting sampling time from the dataset
+  timesR <- as.numeric(BData[BData$Treatment=="Rhizosphere", c("Time")])
+  times <- as.numeric(BData[BData$Treatment!="Rhizosphere", c("Time")])
+  #==========================Defining initial conditions that are passed to model
+  ##E and X1 at time zero are estimated from the Flush/DNA corrected for respective conversion factors
+  B0R = as.numeric(BData[BData$Treatment=="Rhizosphere", c("DNAinit")])[1]/x[5]
+  B0 = as.numeric(BData[BData$Treatment!="Rhizosphere", c("DNAinit")])[1]/x[5]
+  y0R <- c(as.numeric(BData[BData$Treatment=="Rhizosphere", c("Sinit")])[1], B0R, 0)
+  y0 <- c(as.numeric(BData[BData$Treatment!="Rhizosphere", c("Sinit")])[1], B0, 0)
+  #==========================Running simulation
+  Yhat <- rbind(Blag2014ODESolvM(Monod, x, timesR, y0R),
+                Blag2014ODESolvM(Monod, x, times, y0))
+  #==========================Calculating error that is minimized
+  ##Measured data
+  Y <- data.matrix(BData[, c("CO2", "DNA")])
+  ##Weights
+  W <- matrix(rep(apply(Y, 2, sd, na.rm = T), each = length(c(times, timesR))), nrow = dim(Y)[1], ncol = dim(Y)[2])
+  ##Error
+  return(sum(((Yhat - Y)/W)^2, na.rm=T))
+}

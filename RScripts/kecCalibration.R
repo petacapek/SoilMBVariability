@@ -12,6 +12,8 @@ library(FME)
 library(DEoptim)
 library(ABCoptim)
 library(rcompanion)
+library(optimx)
+library(reticulate)
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
 #ggplot theme
 theme_min<-theme(axis.text.x=element_text(vjust=0.2, size=18, colour="black"),
@@ -34,312 +36,221 @@ theme_min<-theme(axis.text.x=element_text(vjust=0.2, size=18, colour="black"),
 #===========================
 # All estimated parameters are stored here
 parsAll <- data.frame(Study = character(), Treatment = character(), 
-                      yA = numeric(), Km = numeric(), v = numeric(),
-                      m = numeric(), g = numeric(), ce = numeric(), nX1 = numeric(), 
-                      iX1 = numeric(),  tX1 = numeric(), te = numeric(), rX1 = numeric(), re = numeric(),
-                      pX1 = numeric(), pe = numeric(), lX1 = numeric(), le = numeric())
+                      Im = numeric(), Km = numeric(), yA = numeric(),
+                      Em = numeric(), m = numeric(), g = numeric(), ne = numeric(), nX1 = numeric(),
+                      iX1 = numeric(), te = numeric(), tX1 = numeric(), re = numeric(), rX1 = numeric(), 
+                      pe = numeric(), pX1 = numeric(), le = numeric(), lX1 = numeric())
 #===========================
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~Study of Wardle and Parkinson (1990)~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
-#Data
-WPData = read.csv("../SoilMBVariabilityData/Wardle1990.csv")
-#Visualizing the data
-ggplot(WPData, aes(Time, kec)) + geom_point(cex=6, pch=21, aes(fill = Moisture)) +
-  theme_min + ylab(expression(paste(italic(k[ec])~factor))) + xlab("Time (days)") + 
-  theme(legend.position = c(0.15, 0.25)) + ylim(0.2, 0.45) +
-  scale_fill_manual(values = c("white", "grey30", "grey50", "grey70", "black")) + facet_grid(.~MicGroup)
-  
-#Fitting the DEB model
-##Assumption 1: f = 0 because all substrate has been consumed fast
-###Applying the assumption, equation to fit has a form
-###kec = (nX1*MX1 + ne*ce*e(t))/(MX1 + ce*e(t))
-###where e(t) = e0*exp(-v*Time)
-
-##Assumption 2: ne = 1
-###Applying assumption 2 changes equation to
-###kec = (nX1*MX1 + ce*e(t))/(MX1 + ce*e(t))
-
-##Assumption 3: MX1 = ce/4 (Henegraaf and Muller, 2001)
-###Applying assumption 3 changes equation to
-###kec = (nX1/4 + e(t))/(0.25 + e(t))
-
-###Across all data
-nlsWP0 <- nls(kec ~ (nX1/4 + e0*exp(-v*Time))/(0.25 + e0*exp(-v*Time)),
-               WPData, start = list(nX1 = 0.4, e0 = 1e-3, v = 0.01))
-summary(nlsWP0)
-
-#Visualizing the fit
-WPcoefs1<-coef(nlsWP0)
-ggplot(WPData, aes(Time, kec)) + geom_point(cex=6, pch=21, aes(fill = Moisture)) +
-  theme_min + ylab(expression(paste(italic(k[ec])~factor))) + xlab("Time (days)") + 
-  theme(legend.position = c(0.15, 0.25)) + ylim(0.2, 0.45) +
-  scale_fill_manual(values = c("white", "grey30", "grey50", "grey70", "black")) + facet_grid(.~MicGroup) +
-  stat_function(fun = function(x){(WPcoefs1[1]/4 + WPcoefs1[2]*exp(-WPcoefs1[3]*x))/
-      (0.25 + WPcoefs1[2]*exp(-WPcoefs1[3]*x))}, lwd = 1.5)
-
-###nX1 different for bacteria and fungi
-nlsWP1B <- nls(kec ~ (nX1/4 + e0*exp(-v*Time))/(0.25 + e0*exp(-v*Time)),
-              WPData, start = list(nX1 = 0.4, e0 = 0.04, v = 0.03),
-              subset = MicGroup == "Bacteria")
-nlsWP1F <- nls(kec ~ (nX1/4 + e0*exp(-v*Time))/(0.25 + e0*exp(-v*Time)),
-               WPData, start = list(nX1 = 0.4, e0 = 0.04, v = 0.03),
-               subset = MicGroup == "Fungi")
-nlsWP1 <- nls(kec ~ (nX1[MicGroup]/4 + e0*exp(-v*Time))/(0.25 + e0*exp(-v*Time)),
-              WPData, start = list(nX1 = c(0.3, 0.3), e0 = 0.04, v = 0.03),
-              control = c(maxiter = 1e9))
-summary(nlsWP1)
-anova(nlsWP0, nlsWP1)
-
-#Visualizing the fit
-WPcoefs2<-coef(nlsWP1)
-WPPreds<-data.frame(MicGroup = rep(c("Bacteria", "Fungi"), each = 31), Time = rep(seq(0, 30), 2), kec = numeric(length = 62))
-for(i in 1:nrow(WPPreds)){
-  if(WPPreds$MicGroup[i] == "Bacteria"){
-    WPPreds$kec[i] <- (WPcoefs2[1]/4 + WPcoefs2[3]*exp(-WPcoefs2[4]*WPPreds$Time[i]))/
-      (0.25 + WPcoefs2[3]*exp(-WPcoefs2[4]*WPPreds$Time[i]))
-  }else{
-    WPPreds$kec[i] <- (WPcoefs2[2]/4 + WPcoefs2[3]*exp(-WPcoefs2[4]*WPPreds$Time[i]))/
-      (0.25 + WPcoefs2[3]*exp(-WPcoefs2[4]*WPPreds$Time[i]))
-  }
-}
-
-ggplot(WPData, aes(Time, kec)) + geom_point(cex=6, pch=21, aes(fill = Moisture)) +
-  theme_min + ylab(expression(paste(italic(k[ec])~factor))) + xlab("Time (days)") + 
-  theme(legend.position = c(0.15, 0.25)) + ylim(0.2, 0.45) +
-  scale_fill_manual(values = c("white", "grey30", "grey50", "grey70", "black")) + facet_grid(.~MicGroup) +
-  geom_line(data = WPPreds, aes(Time, kec), lwd = 1.5)
-
-#=====================
-# Study, Treatment, yA, Km, v, m, g, ce, nX1, 
-# iX1, ne, rX1, re, pX1, pe, lX1, le
-parsAll <- rbind(parsAll, data.frame(Study = c("Wardle and Parkinson (1990)", "Wardle and Parkinson (1990)"),
-                                     Treatment = c("Bacteria", "Fungi"),
-                                     yA = c(NA, NA),  Km = c(NA, NA), v = c(WPcoefs2[4], WPcoefs2[4]),
-                                     m = c(NA, NA),  g = c(NA, NA), ce = c(NA, NA),  nX1 = c(WPcoefs2[1], WPcoefs2[2]),
-                                     iX1 = c(NA, NA),  tX1 = c(NA, NA), te = c(NA, NA), rX1 = c(NA, NA),
-                                     re = c(NA, NA),  pX1 = c(NA, NA), pe = c(NA, NA),
-                                     lX1 = c(NA, NA), le = c(NA, NA)))
-#=====================
-
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~Study of Glanville et al. (2016)~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
 #Data
 GlData = read.csv("../SoilMBVariabilityData/Glanville2016.csv")
+#!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+##All C pools are in pmol(C)/g(DW) except of initial chloroform labile C, which is in nmol(C)/g(DW)
+
 #Visualizing the data
-ggplot(GlData, aes(Time/24, kec_original)) + geom_point(cex=6, pch=21, aes(fill = Substrate)) +
+##kec
+ggplot(GlData, aes(Time, kec)) + geom_point(cex=6, pch=21, aes(fill = Substrate)) +
   theme_min + ylab(expression(paste(italic(k[ec])~factor))) + xlab("Time (days)") + 
   theme(legend.position = c(0.8, 0.6), legend.title = element_blank()) + 
   scale_fill_manual(values = c("white", "grey")) + scale_y_continuous(limits = c(0.2, 0.43)) +
   geom_hline(yintercept = 0.38, lwd = 1, lty = 2)
+##14C Flush
+ggplot(GlData, aes(Time, Flush)) + geom_point(cex=6, pch=21, aes(fill = Substrate)) +
+  theme_min + ylab(expression(paste("Flush (pmo", l^{14},C~g(DW)^{-1}, ")"))) + xlab("Time (days)") + 
+  theme(legend.position = c(0.8, 0.8), legend.title = element_blank()) + 
+  scale_fill_manual(values = c("white", "grey"))
+##14C CO2
+ggplot(GlData, aes(Time, CO2)) + geom_point(cex=6, pch=21, aes(fill = Substrate)) +
+  theme_min + ylab(expression(paste(CO[2], " (pmo", l^{14},C~g(DW)^{-1}, ")"))) + xlab("Time (days)") + 
+  theme(legend.position = c(0.8, 0.4), legend.title = element_blank()) + 
+  scale_fill_manual(values = c("white", "grey"))
 
-#Fitting the 2-pool model presented in the paper
-##Glucose
-nls0G<-nls(kec_original~A1*exp(-b1*Time/24)+A2*exp(-b2*Time/24),
-           data = GlData, 
-           subset = Substrate == "Glucose",
-           start = list(A1 = 0.26, b1 = 4e-5, A2=0.1, b2=0.1))
-summary(nls0G)
-###Coefficients
-Gcoefs<-coef(nls0G)
-##Alanin
-nls0A<-nls(kec_original~A1*exp(-b1*Time/24) + A2*exp(-b2*Time/24),
-           data = GlData, 
-           subset = Substrate == "Alanin",
-           start = list(A1 = 0.26, b1 = 4e-5, A2=0.1, b2=0.1))
-summary(nls0A)
-###Coefficients
-Acoefs<-coef(nls0A)
+#Model calibration
+##Reading respective python scripts
+source_python("../PythonScripts/IndividualStudies/DEBmodelIso.py")
+source_python("../PythonScripts/IndividualStudies/Glanville2016ODESolv.py")
+#=====================TEST FOR GLUCOSE not run
+# #time
+# times<-as.numeric(GlData[GlData$Substrate=="Glucose", c("Time")])
+# #parameters
+# p<-c(Im = 1, Km = 50, yA=0.8, Em=1, m=1e-5, g=0.3, ne=0.8, nX1=0.4)
+# #initial states
+# y0<-c(10, 0, 0, 0, 1, 3)
+# testout<-Glanville2016ODESolv(DEBmodelIso, p, times, y0)
+#=====================GLUCOSE
+#Objective function
+source("IndividualStudies/GlObjectiveGlucose.R")
+##Optimization
+#==================================================#
+##Parameters (Initial guess, lower and upper bound) 
+Im = c(1, 1e-2, 20)
+Km = c(25, 0.1, 3000)
+yA = c(0.9, 0, 1)
+Em = c(1, 1e-3, 1e3)
+m = c(1e-3, 1e-8, 1)
+g = c(0.3, 0.01, 10)
+ne = c(0.8, 0, 1)
+nX1 = c(0.3, 0, 1)
 
-#Visualizing the fit
-ggplot(GlData, aes(Time/24, kec_original)) + geom_point(cex=6, pch=21, aes(fill = Substrate)) +
-  theme_min + ylab(expression(paste(italic(k[ec])~factor))) + xlab("Time (days)") + 
-  theme(legend.position = c(0.8, 0.8)) + scale_fill_manual(values = c("black", "red")) + 
-  stat_function(fun = function(x){Gcoefs[1]*exp(-Gcoefs[2]*x)+Gcoefs[3]*exp(-Gcoefs[4]*x)}, lwd = 1.5, color = "red") + #Glucose
-  stat_function(fun = function(x){Acoefs[1]*exp(-Acoefs[2]*x)+Acoefs[3]*exp(-Acoefs[4]*x)}, lwd = 1.5)  #Alanin
+Parms = rbind(Im, Km, yA, Em, m, g, ne, nX1)
+#==================================================#
+##First guess by MCMC 
+GlP1 <- modMCMC(GlObjectiveGlucose, p = Parms[,1], lower = Parms[, 2], upper = Parms[, 3], niter = 30000)
+summary(GlP1)
+##Estimate
+ParmsGlanvilleGlucose <- abc_optim(fn = GlObjectiveGlucose, 
+                                   par = as.numeric(summary(GlP1)[c("mean"), ]), 
+                                   lb = as.numeric(summary(GlP1)[c("min"), ]), 
+                                   ub = as.numeric(summary(GlP1)[c("max"), ]))
+ParmsGlanvilleGlucose$par
+#==================================================#
+#Goodness of fit and simulations
+source("IndividualStudies/GlFitGlucose.R")
+SimGlanvilleGlucose <- GlFitGlucose(ParmsGlanvilleGlucose$par)
+SimGlanvilleGlucose$errors
 
-#This is the null model
-nls0<-nls(kec_original~A1[Substrate]*exp(-b1[Substrate]*Time/24)+A2[Substrate]*exp(-b2[Substrate]*Time/24),
-          data = GlData, 
-          start = list(A1 = c(Acoefs[1], Gcoefs[1]), 
-                       b1 = c(Acoefs[2], Gcoefs[2]), 
-                       A2 = c(Acoefs[3], Gcoefs[3]), 
-                       b2 = c(Acoefs[4], Gcoefs[4])))
-summary(nls0)
+#=====================Alanin
+#Objective function
+source("IndividualStudies/GlObjectiveAla.R")
+##Optimization
+##First guess by MCMC 
+GlP2 <- modMCMC(GlObjectiveAla, p = Parms[,1], lower = Parms[, 2], upper = Parms[, 3], niter = 30000)
+summary(GlP2)
+##Estimate
+ParmsGlanvilleAla <- abc_optim(fn = GlObjectiveAla, 
+                               par = as.numeric(summary(GlP2)[c("mean"), ]), 
+                               lb = as.numeric(summary(GlP2)[c("min"), ]), 
+                               ub = as.numeric(summary(GlP2)[c("max"), ]))
+ParmsGlanvilleAla$par
+#==================================================#
+#Goodness of fit and simulations
+source("IndividualStudies/GlFitAla.R")
+SimGlanvilleAla <- GlFitAla(ParmsGlanvilleAla$par)
+SimGlanvilleAla$errors
 
-#Fitting the DEB model
-##Assumption 1: f = 0 because all substrate has been consumed fast
-###Applying the assumption, equation to fit has a form
-###kec = (nX1*MX1 + ne*ce*e(t))/(MX1 + ce*e(t))
-###where e(t) = e0*exp(-v*Time)
+#=====================Visualizing the data with simulations
+Gluc <- SimGlanvilleGlucose$Simulation
+Gluc$Substrate <- "Glucose"
+Ala <- SimGlanvilleAla$Simulation
+Ala$Substrate <- "Alanin"
+SimGlanville <- rbind(Gluc, Ala)
 
-##Assumption 2: ne = 1
-###Applying assumption 2 changes equation to
-###kec = (nX1*MX1 + ce*e(t))/(MX1 + ce*e(t))
-
-##Assumption 3: MX1 = ce/4 (Henegraaf and Muller, 2001)
-###Applying assumption 3 changes equation to
-###kec = (nX1/4 + e(t))/(0.25 + e(t))
-
-##Assumption 4: v is same across substrates
-
-##Assumption 5: e0 is same across substrates
-###Applying assumptions 4 and 5 lead to final form of equation
-###kec = (nX1/4 + e0*exp(-v*Time))/(0.25 + e0*exp(-v*Time)) - 3 coefficients are estimated (e0, v and nX1)
-nlsDEB0 <- nls(kec_original ~ (nX1/4 + e0*exp(-v*Time))/(0.25 + e0*exp(-v*Time)),
-               GlData, start = list(nX1 = 0.3, e0 = 1e-3, v = 0.01))
-summary(nlsDEB0)
-anova(nls0, nlsDEB0) 
-AICtab(nls0, nlsDEB0, sort = T, weights = T, logLik = T, base = T)#DEB theory doesn't explain data better
-
-##Relaxing assumption 5
-nlsDEB1 <- nls(kec_original ~ (nX1/4 + e0[Substrate]*exp(-v[Substrate]*Time/24))/(0.25 + e0[Substrate]*exp(-v[Substrate]*Time/24)),
-               GlData, start = list(nX1 = 0.3, e0 = c(1e-3, 1e-3), v = c(0.1, 0.1)))
-summary(nlsDEB1)
-anova(nls0, nlsDEB1)
-AICtab(nls0, nlsDEB1, sort = T, weights = T, logLik = T, base = T)#DEB theory doesn't explain data better
-
-##Assumption 6: 2 types of carriers exit
-###Applying assumptions 6 lead to final form of equation
-###kec = (nX1/4 + e0*exp(-v1*Time)+e0*exp(-v2*Time))/(0.25 + e0*exp(-v1*Time)+e0*exp(-v2*Time)) - 3 coefficients are estimated (e0, v and nX1)
-nlsDEB2 <- nls(kec_original ~ (nX1/4 + e0*exp(-v1*Time/24)+e0*exp(-v2*Time/24))/(0.25 + e0*exp(-v1*Time/24)+e0*exp(-v2/24*Time)),
-               GlData, start = list(nX1 = 0.3, e0 = 1e-3, v1 = 0.01, v2 = 0.1))
-summary(nlsDEB2)
-anova(nls0, nlsDEB2) 
-anova(nlsDEB1, nlsDEB2)
-AICtab(nls0, nlsDEB2, sort = T, weights = T, logLik = T, base = T)#DEB theory doesn't explain data better
-
-###Applying assumptions 6 and relaxing assumption 5
-nlsDEB3 <- nls(kec_original ~ (nX1/4 + e0[Substrate]*exp(-v1*Time/24)+e0[Substrate]*exp(-v1/90*Time/24))/(0.25 + e0[Substrate]*exp(-v1*Time/24)+e0[Substrate]*exp(-v1/90*Time/24)),
-               GlData, start = list(nX1 = 0.3, e0 = c(1e-3, 1e-3), v1 = 0.1))
-summary(nlsDEB3)
-anova(nls0, nlsDEB3) 
-anova(nlsDEB1, nlsDEB3)
-AICtab(nls0, nlsDEB3, sort = T, weights = T, logLik = T, base = T)#DEB theory doesn't explain data better
-
-
-#Visualizing the fit
-DEBcoefs1<-coef(nlsDEB1)
-ggplot(GlData, aes(Time/24, kec_original)) + geom_point(cex=6, pch=21, aes(fill = Substrate)) +
+##kec
+ggplot(GlData, aes(Time, kec)) + geom_point(cex=6, pch=21, aes(fill = Substrate)) +
   theme_min + ylab(expression(paste(italic(k[ec])~factor))) + xlab("Time (days)") + 
   theme(legend.position = c(0.8, 0.6), legend.title = element_blank()) + 
   scale_fill_manual(values = c("white", "grey")) + scale_y_continuous(limits = c(0.2, 0.43)) +
-  #geom_hline(yintercept = 0.38, lwd = 1, lty = 2)# +
-  #stat_function(fun = function(x){Gcoefs[1]*exp(-Gcoefs[2]*x)+Gcoefs[3]*exp(-Gcoefs[4]*x)}, lwd = 1.5, color = "red") + #Glucose
-  #stat_function(fun = function(x){Acoefs[1]*exp(-Acoefs[2]*x)+Acoefs[3]*exp(-Acoefs[4]*x)}, lwd = 1.5)  + #Alanin
-  stat_function(fun = function(x){(DEBcoefs1[1]/4 + DEBcoefs1[2]*exp(-DEBcoefs1[4]*x))/
-      (0.25 + DEBcoefs1[2]*exp(-DEBcoefs1[4]*x))}, lwd = 1.5) + #Alanin
-  stat_function(fun = function(x){(DEBcoefs1[1]/4 + DEBcoefs1[3]*exp(-DEBcoefs1[4]*x))/
-      (0.25 + DEBcoefs1[3]*exp(-DEBcoefs1[5]*x))}, lwd = 1.5, color = "grey") #Glucose
-
-#Visualizing the fit
-DEBcoefs3<-coef(nlsDEB3)
-ggplot(GlData, aes(Time/24, kec_original)) + geom_point(cex=6, pch=21, aes(fill = Substrate)) +
-  theme_min + ylab(expression(paste(italic(k[ec])~factor))) + xlab("Time (days)") + 
-  theme(legend.position = c(0.8, 0.6), legend.title = element_blank()) + 
-  scale_fill_manual(values = c("white", "grey")) + scale_y_continuous(limits = c(0.2, 0.43)) +
-  #geom_hline(yintercept = 0.38, lwd = 1, lty = 2)# +
-  #stat_function(fun = function(x){Gcoefs[1]*exp(-Gcoefs[2]*x)+Gcoefs[3]*exp(-Gcoefs[4]*x)}, lwd = 1.5, color = "red") + #Glucose
-  #stat_function(fun = function(x){Acoefs[1]*exp(-Acoefs[2]*x)+Acoefs[3]*exp(-Acoefs[4]*x)}, lwd = 1.5)  + #Alanin
-  stat_function(fun = function(x){(DEBcoefs3[1]/4 + DEBcoefs3[2]*exp(-DEBcoefs3[4]*x) + DEBcoefs3[2]*exp(-DEBcoefs3[4]/90*x))/
-      (0.25 + DEBcoefs3[2]*exp(-DEBcoefs3[4]*x) + DEBcoefs3[2]*exp(-DEBcoefs3[4]/90*x))}, lwd = 1.5) + #Alanin
-  stat_function(fun = function(x){(DEBcoefs1[1]/4 + DEBcoefs3[3]*exp(-DEBcoefs3[4]*x) + DEBcoefs3[3]*exp(-DEBcoefs3[4]/90*x))/
-      (0.25 + DEBcoefs3[3]*exp(-DEBcoefs3[4]*x) + DEBcoefs3[3]*exp(-DEBcoefs3[4]/90*x))}, lwd = 1.5, color = "grey") #Glucose
-
-#=====================
-# Study, Treatment, yA, Km, v, m, g, ce, nX1, 
-# iX1, ne, rX1, re, pX1, pe, lX1, le
-parsAll <- rbind(parsAll, data.frame(Study = c("Glanville et al. (2016)", "Glanville et al. (2016)"),
-                                     Treatment = c("Glucose", "Alanin"),
-                                     yA = c(NA, NA),  Km = c(NA, NA), v = c(DEBcoefs1[5], DEBcoefs1[4]),
-                                     m = c(NA, NA),  g = c(NA, NA), ce = c(NA, NA),  nX1 = c(DEBcoefs1[1], DEBcoefs1[1]),
-                                     iX1 = c(NA, NA),  tX1 = c(NA, NA), te = c(NA, NA), rX1 = c(NA, NA),
-                                     re = c(NA, NA),  pX1 = c(NA, NA), pe = c(NA, NA),
-                                     lX1 = c(NA, NA), le = c(NA, NA)))
-#=====================
+  geom_hline(yintercept = 0.38, lwd = 1, lty = 2) +
+  geom_line(data = SimGlanville, aes(Time, kec, color = Substrate), lwd = 1.2) +
+  scale_color_manual(values = c("grey30", "black"))
+##14C Flush
+ggplot(GlData, aes(Time, Flush)) + geom_point(cex=6, pch=21, aes(fill = Substrate)) +
+  theme_min + ylab(expression(paste("Flush (pmo", l^{14},C~g(DW)^{-1}, ")"))) + xlab("Time (days)") + 
+  theme(legend.position = c(0.8, 0.8), legend.title = element_blank()) + 
+  scale_fill_manual(values = c("white", "grey")) +
+  geom_line(data = SimGlanville, aes(Time, Flush, color = Substrate), lwd = 1.2) +
+  scale_color_manual(values = c("grey30", "black"))
+##14C CO2
+ggplot(GlData, aes(Time, CO2)) + geom_point(cex=6, pch=21, aes(fill = Substrate)) +
+  theme_min + ylab(expression(paste(CO[2], " (pmo", l^{14},C~g(DW)^{-1}, ")"))) + xlab("Time (days)") + 
+  theme(legend.position = c(0.8, 0.4), legend.title = element_blank()) + 
+  scale_fill_manual(values = c("white", "grey")) +
+  geom_line(data = SimGlanville, aes(Time, CO2, color = Substrate), lwd = 1.2) +
+  scale_color_manual(values = c("grey30", "black"))
+#=====================Save parameters
+parsAll <- rbind(parsAll, data.frame(Study = c("Glanville et al. (2016)"),
+                                     Treatment = c("Glucose"),
+                                     Im = ParmsGlanvilleGlucose$par[1], Km = ParmsGlanvilleGlucose$par[2], 
+                                     yA = ParmsGlanvilleGlucose$par[3],
+                                     Em = ParmsGlanvilleGlucose$par[4], m = ParmsGlanvilleGlucose$par[5], 
+                                     g = ParmsGlanvilleGlucose$par[6], 
+                                     ne = ParmsGlanvilleGlucose$par[7], nX1 = ParmsGlanvilleGlucose$par[8], 
+                                     iX1 = NA, te = NA, tX1 = NA, re = NA, rX1 = NA, 
+                                     pe = NA, pX1 = NA, le = NA, lX1 = NA))
+parsAll <- rbind(parsAll, data.frame(Study = c("Glanville et al. (2016)"),
+                                     Treatment = c("Alanine"),
+                                     Im = ParmsGlanvilleAla$par[1], Km = ParmsGlanvilleAla$par[2], 
+                                     yA = ParmsGlanvilleAla$par[3],
+                                     Em = ParmsGlanvilleAla$par[4], m = ParmsGlanvilleAla$par[5], 
+                                     g = ParmsGlanvilleAla$par[6], 
+                                     ne = ParmsGlanvilleAla$par[7], nX1 = ParmsGlanvilleAla$par[8], 
+                                     iX1 = NA, te = NA, tX1 = NA, re = NA, rX1 = NA, 
+                                     pe = NA, pX1 = NA, le = NA, lX1 = NA))
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~Study of Tessier et al. (1998)~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
+#NOT RUN - WRONG DATA OR METHOD DESCRIPTION
+#Studies also not involved in the analyses due to various issues in reprted data:
+##Bremer and Kuikman, 1994; Dictor et al., 1998; Zagal, 1993; Gregorich et al., 1990 and 1991; Nguyen and 
+##Guckert, 2001; Luna-Guido et al., 2001 
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~Study of Sparling et al. (1988, 1990)~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
 #Data
-TData = read.csv("../SoilMBVariabilityData/Tessier1998.csv")
+Sp90 <- read.csv("../SoilMBVariabilityData/Sparling1990.csv")
 #Visualizing the data
-ggplot(TData, aes(Ctot, kec)) + geom_point(cex=6, pch=21, aes(fill = Treatment)) +
+##kec
+ggplot(Sp90, aes(Cmicinit, kec)) + geom_point(cex=6, pch=21) +
   theme_min + ylab(expression(paste(italic(k[ec])~factor))) + 
-  xlab(expression(paste("Total organic  carbon (", mu, 'mol(C) ', g^{-1}, ')'))) + 
-  theme(legend.position = c(0.8, 0.15))
+  xlab(expression(paste("Initial Flush (", mu, "mol (C) ", g(DW)^{-1}, ")")))
+##CO2
+ggplot(Sp90, aes(Cmicinit, CO2)) + geom_point(cex=6, pch=21) +
+  theme_min + ylab(expression(paste(CO[2], " (", mu, "mo", l^{14}, C~g(DW)^{-1}, ")"))) + 
+  xlab(expression(paste("Initial Flush (", mu, "mol (C) ", g(DW)^{-1}, ")")))
+##Flush
+ggplot(Sp90, aes(Cmicinit, Flush)) + geom_point(cex=6, pch=21) +
+  theme_min + ylab(expression(paste("Flush (", mu, "mo", l^{14}, C~g(DW)^{-1}, ")"))) + 
+  xlab(expression(paste("Initial Flush (", mu, "mol (C) ", g(DW)^{-1}, ")")))
+##Consumed substrate
+ggplot(Sp90, aes(Cmicinit, Sinit-S)) + geom_point(cex=6, pch=21) +
+  theme_min + ylab(expression(paste("Consumed glucose (", mu, "mo", l^{14}, C~g(DW)^{-1}, ")"))) + 
+  xlab(expression(paste("Initial Flush (", mu, "mol (C) ", g(DW)^{-1}, ")")))
 
-summary(lm(DOC~Ctot, TData))
+#Model calibration
+##Reading respective python scripts
+source_python("../PythonScripts/IndividualStudies/Sparling1990ODESolv.py")
+##Reading objective function
+source("IndividualStudies/SpObjective.R")
+##Optimization
+##First guess by MCMC 
+SpP <- modMCMC(SpObjective, p = Parms[,1], lower = Parms[, 2], upper = Parms[, 3], niter = 30000)
+summary(SpP)
+##Estimate
+ParmsSparling90 <- abc_optim(fn = SpObjective, 
+                             par = as.numeric(summary(SpP)[c("mean"), ]), 
+                             lb = as.numeric(summary(SpP)[c("min"), ]), 
+                             ub = as.numeric(summary(SpP)[c("max"), ]))
 
-#Fitting the DEB model
-##Assumption: de/dt = 0 because biomass is in equilibrium with substrate
-###Applying the assumption
-###e = f; where f = S/(Km + S) - S is total organic carbon
-###kec = (0.25*nX1 + f)/(0.25 + f)
+ParmsSparling90$par
+#ParmsSparling90DE$optim$bestmem
+#==================================================#
+#Goodness of fit and simulations
+source("IndividualStudies/SpFit.R")
+SimSparling90 <- SpFit(ParmsSparling90$par)
+SimSparling90$errors
+#=====================Visualizing the data with simulations
+SparlingSim <- as.data.frame(SimSparling90$Simulation)
+SparlingSimY <- melt(SparlingSim[, 1:4])
+colnames(SparlingSimY) <- c("Variable", "Measured")
+SparlingSimY$Predicted <- melt(SparlingSim[, 5:8])[, 2]
 
-###fitting across treatments
-nlsDEBT<-nls(kec~(0.25*nX1 + Ctot/(Km + Ctot))/(0.25 + Ctot/(Km + Ctot)), data = TData,
-             start = list(nX1 = 0.3, Km = 10))
-summary(nlsDEBT)
+ggplot(SparlingSimY, aes(Measured, Predicted)) + geom_point(cex = 6, pch = 21, fill = "grey") +
+  theme_min + facet_wrap(~Variable, scales = "free") +
+  geom_abline(intercept = 0, slope = 1)
 
-###fitting for each treatment separately
-nlsDEBT2<-nls(kec~(0.25*nX1[Treatment] + Ctot/(Km[Treatment] + Ctot))/(0.25 + Ctot/(Km[Treatment] + Ctot)), data = TData,
-             start = list(nX1 = c(0.3, 0.3), Km = c(1000, 1000)))
-summary(nlsDEBT2)
-anova(nlsDEBT, nlsDEBT2)
-coefDEBT<-coef(nlsDEBT2)
-
-ggplot(TData, aes(Ctot, kec)) + geom_point(cex=6, pch=21, aes(fill = Treatment)) +
-  theme_min + ylab(expression(paste(italic(k[ec])~factor))) + 
-  xlab(expression(paste("Total organic carbon (", mu, 'mol(C) ', g^{-1}, ')'))) + 
-  theme(legend.position = c(0.8, 0.15)) + 
-  stat_function(fun = function(x){(0.25*coefDEBT[1] + x/(coefDEBT[3] + x))/(0.25 + x/(coefDEBT[3] + x))}, lwd = 1.5) + 
-  stat_function(fun = function(x){(0.25*coefDEBT[2] + x/(coefDEBT[4] + x))/(0.25 + x/(coefDEBT[4] + x))}, lwd = 1.5, lty = 2) 
-
-##Assumption: de/dt = 0 and 2 carriers exist
-###Applying the assumption
-###e = (v1*f1 + v2*f2)/(v1 + v2); where fi = S/(Kmi + S) - S is total organic carbon
-###kec = (0.25*nX1 + (v1*f1 + v2*f2)/(v1 + v2))/(0.25 + (v1*f1 + v2*f2)/(v1 + v2))
-###according to Nguyen and Guckert (2001), v2 = v1/90 and Km2 = Km1/400
-###equation simplifies to kec = (0.25*nX1 + (f1 + f2/90)/(1 + 1/90))/(0.25 + (f1 + f2/90)/(1 + 1/90))
-
-###fitting across treatments
-nlsDEBT2<-nls(kec~(0.25*nX1 + (Ctot/(Km + Ctot) + Ctot/(Km/400 + Ctot)/90)/(1 + 1/90))/
-                (0.25 + (Ctot/(Km + Ctot) + Ctot/(Km/400 + Ctot)/90)/(1 + 1/90)), data = TData,
-             start = list(nX1 = 0.3, Km = 1000))
-summary(nlsDEBT2)
-
-##Using MCMC
-costT = function(data){
-costIn <- function(x){
-  # return(sum((data$kec-(0.25*x[1] + x[3]*(data$Ctot/(x[2] + data$Ctot) + data$Ctot/(x[2]/400 + data$Ctot)/90)/(1 + 1/90))/
-  #   (0.25 + (data$Ctot/(x[2] + data$Ctot) + data$Ctot/(x[2]/400 + data$Ctot)/90)/(1 + 1/90)))^2, na.rm = T))
-  
-  return(sum((data$kec-(0.25*x[1] + x[2]*data$Ctot/(x[3] + data$Ctot))/(0.25 + data$Ctot/(x[3] + data$Ctot)))^2, na.rm = T))
-}
-
-###Parameters estimation using MCMC
-mcmc<-modMCMC(f=costIn, p=c(0.3, 0.8, 500), lower=c(0, 0, 0.1), upper=c(1, 1, 40000), niter=100000)
-###Improving the estimation using differential evolution algorithm
-DE<-DEoptim(fn=costIn, lower=as.numeric(summary(mcmc)["min",]), upper=as.numeric(summary(mcmc)["max",]), 
-                   control = c(itermax = 10000, steptol = 50, reltol = 1e-8, trace=FALSE, strategy=3, NP=250))
-return(DE$optim$bestmem)
-}
-coefManure<-costT(TData[TData$Treatment=="Manure", ])
-coefUnfert<-costT(TData[TData$Treatment!="Manure", ])
- 
-ggplot(TData, aes(Ctot, kec)) + geom_point(cex=6, pch=21, aes(fill = Treatment)) +
-   theme_min + ylab(expression(paste(italic(k[ec])~factor))) + 
-   xlab(expression(paste("Total organic carbon (", mu, 'mol(C) ', g^{-1}, ')'))) + 
-   theme(legend.position = c(0.8, 0.15)) + 
-  #  stat_function(fun = function(x){(0.25*coefManure[1] + coefManure[3]*(x/(coefManure[2] + x) + x/(coefManure[2]/400 + x)/90)/(1 + 1/90))/
-  #      (0.25 + (x/(coefManure[2] + x) + x/(coefManure[2]/400 + x)/90)/(1 + 1/90))}, lwd = 1.5) +
-  # stat_function(fun = function(x){(0.25*coefUnfert[1] + coefUnfert[3]*(x/(coefUnfert[2] + x) + x/(coefUnfert[2]/400 + x)/90)/(1 + 1/90))/
-  #     (0.25 + (x/(coefUnfert[2] + x) + x/(coefUnfert[2]/400 + x)/90)/(1 + 1/90))}, lwd = 1.5, lty = 2) +
-   
-  stat_function(fun = function(x){(0.25*coefManure[1] + coefManure[2]*x/(coefManure[3] + x))/(0.25 + x/(coefManure[3] + x))}, lwd = 1.5) + 
-  stat_function(fun = function(x){(0.25*coefUnfert[1] + coefUnfert[2]*x/(coefUnfert[3] + x))/(0.25 + x/(coefUnfert[3] + x))}, lwd = 1.5, lty = 2) 
-
+#=====================Save parameters
+parsAll <- rbind(parsAll, data.frame(Study = c("Sparling et al. (1988, 1990)"),
+                                     Treatment = c("Glucose"),
+                                     Im = ParmsSparling90$par[1], Km = ParmsSparling90$par[2], 
+                                     yA = ParmsSparling90$par[3],
+                                     Em = ParmsSparling90$par[4], m = ParmsSparling90$par[5], 
+                                     g = ParmsSparling90$par[6], 
+                                     ne = ParmsSparling90$par[7], nX1 = ParmsSparling90$par[8], 
+                                     iX1 = NA, te = NA, tX1 = NA, re = NA, rX1 = NA, 
+                                     pe = NA, pX1 = NA, le = NA, lX1 = NA))
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~Study of Santruckova et al. (2004)~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
@@ -350,55 +261,70 @@ HPData = read.csv("../SoilMBVariabilityData/Santruckova2004.csv")
 ##kec factor
 ggplot(HPData, aes(Time, kec)) + geom_point(cex=6, pch=21, fill = "grey") +
   theme_min + ylab(expression(paste(italic(k[ec])~factor))) + xlab("Time (days)") 
-##Cmic 12
-ggplot(HPData, aes(Time, Cmic12)) + geom_point(cex=6, pch=21, fill = "grey") +
-  theme_min + ylab(expression(paste("Flush (", mu, "mol(C) ", g^{-1}, ")"))) + xlab("Time (days)") 
 ##Cmic 14
-ggplot(HPData, aes(Time, Cmic14)) + geom_point(cex=6, pch=21, fill = "grey") +
+ggplot(HPData, aes(Time, Flush)) + geom_point(cex=6, pch=21, fill = "grey") +
   theme_min + ylab(expression(paste("Flush (", mu, "mol(C) ", g^{-1}, ")"))) + xlab("Time (days)") 
 ##Cumulative respiration
-ggplot(HPData, aes(Time, CO214cumul)) + geom_point(cex=6, pch=21, fill = "grey") +
+ggplot(HPData, aes(Time, CO2)) + geom_point(cex=6, pch=21, fill = "grey") +
   theme_min + ylab(expression(paste("Cumulative respiration (", mu, "mol(C) ", g^{-1}, ")"))) + xlab("Time (days)") 
 ##Substrate concentration
 ggplot(HPData, aes(Time, S)) + geom_point(cex=6, pch=21, fill = "grey") +
   theme_min + ylab(expression(paste("Glucose (", mu, "mol(C) ", g^{-1}, ")"))) + xlab("Time (days)") 
 
-#Testing the volume-specific DEB model
-##Parameters estimation
-HPPred = read.csv("../PythonScripts/Santruckova2004Pred.csv", header = F)
-colnames(HPPred) <- c("S", "CO2", "kec", "Cmic14") 
-HPPred$Time = seq(0, 3, by = 0.05)
-
+#Model calibration
+##Reading respective python scripts
+#source_python("../PythonScripts/IndividualStudies/Sparling1990ODESolv.py") !!!!the same calculation is performed 
+##Reading objective function
+source("IndividualStudies/HPObjective.R")
+##Optimization
+##First guess by MCMC 
+HPP <- modMCMC(HPObjective, p = Parms[,1], lower = Parms[, 2], upper = Parms[, 3], niter = 30000)
+summary(HPP)
+##Estimate
+ParmsSantruckova2004 <- abc_optim(fn = HPObjective, 
+                                  par = as.numeric(summary(HPP)[c("mean"), ]), 
+                                  lb = as.numeric(summary(HPP)[c("min"), ]), 
+                                  ub = as.numeric(summary(HPP)[c("max"), ]))
+ParmsSantruckova2004$par
+#==================================================#
+#Goodness of fit and simulations
+source("IndividualStudies/HPFit.R")
+SimSantruckova2004 <- HPFit(ParmsSantruckova2004$par)
+SimSantruckova2004$errors
+#=====================Visualizing the data with simulations
 ##Cumulative respiration
-ggplot(HPData, aes(Time, CO214cumul)) + geom_point(cex=6, pch=21, fill = "grey") +
-  theme_min + ylab(expression(paste("Cumulative respiration (", mu, "mol(C) ", g^{-1}, ")"))) + xlab("Time (days)") +
-  geom_line(data = HPPred, aes(Time, CO2), lwd = 1.5)
+ggplot(HPData, aes(Time, CO2)) + geom_point(cex=6, pch=21, fill = "grey") +
+  theme_min + ylab(expression(paste("Cumul. resp. (", mu, "mol ", atop(14, ), "C " , g^{-1}, ")"))) + 
+  xlab("Time (days)") +
+  geom_line(data = (SimSantruckova2004$Simulation), aes(Time, CO2), lwd = 1.2)
 
 ##Substrate concentration
 ggplot(HPData, aes(Time, S)) + geom_point(cex=6, pch=21, fill = "grey") +
-  theme_min + ylab(expression(paste("Glucose (", mu, "mol(C) ", g^{-1}, ")"))) + xlab("Time (days)") +
-  geom_line(data = HPPred, aes(Time, S), lwd = 1.5)
+  theme_min + ylab(expression(paste("Glucose (", mu, "mol ", atop(14, ), "C " , g^{-1}, ")"))) + 
+  xlab("Time (days)") +
+  geom_line(data = (SimSantruckova2004$Simulation), aes(Time, S), lwd = 1.2)
 
 ##Cmic 14
-ggplot(HPData, aes(Time, Cmic14)) + geom_point(cex=6, pch=21, fill = "grey") +
-  theme_min + ylab(expression(paste("Flush (", mu, "mol(C) ", g^{-1}, ")"))) + xlab("Time (days)") +
-  geom_line(data = HPPred, aes(Time, Cmic14), lwd = 1.5)
+ggplot(HPData, aes(Time, Flush)) + geom_point(cex=6, pch=21, fill = "grey") +
+  theme_min + ylab(expression(paste(CHCl[3] ," flush (", mu, "mol ", atop(14, ), "C " , g^{-1}, ")"))) + 
+  xlab("Time (days)") +
+  geom_line(data = (SimSantruckova2004$Simulation), aes(Time, Flush), lwd = 1.2)
 
 ##kec factor
 ggplot(HPData, aes(Time, kec)) + geom_point(cex=6, pch=21, fill = "grey") +
-  theme_min + ylab(expression(paste(italic(k[ec])~factor))) + xlab("Time (days)") + ylim(0.20, 0.35) +
-  geom_line(data = HPPred, aes(Time, kec), lwd = 1.5)
-#=====================
-# Study, Treatment, yA, Km, v, m, g, ce, nX1, 
-# iX1, ne, rX1, re, pX1, pe, lX1, le
-HPpars <- as.numeric(read.csv("../PythonScripts/Santruckova2004Pars.csv", header = F))
+  theme_min + ylab(expression(paste(italic(k[ec])~factor))) + xlab("Time (days)") + #ylim(0.20, 0.35) +
+  geom_line(data = (SimSantruckova2004$Simulation), aes(Time, kec), lwd = 1.2) +
+  scale_y_continuous(limits = c(0.2, 0.5))
+#=====================Save parameters
 parsAll <- rbind(parsAll, data.frame(Study = c("Santruckova et al. (2004)"),
                                      Treatment = c("Glucose"),
-                                     yA = HPpars[1],  Km = HPpars[2], v = HPpars[3],
-                                     m = HPpars[4],  g = HPpars[5], ce = HPpars[6],  nX1 = HPpars[7],
-                                     iX1 = c(NA),  tX1 = c(NA), te = c(NA), rX1 = c(NA),
-                                     re = c(NA),  pX1 = c(NA), pe = c(NA),
-                                     lX1 = c(NA), le = c(NA)))
+                                     Im = ParmsSantruckova2004$par[1], Km = ParmsSantruckova2004$par[2], 
+                                     yA = ParmsSantruckova2004$par[3],
+                                     Em = ParmsSantruckova2004$par[4], m = ParmsSantruckova2004$par[5], 
+                                     g = ParmsSantruckova2004$par[6], 
+                                     ne = ParmsSantruckova2004$par[7], nX1 = ParmsSantruckova2004$par[8], 
+                                     iX1 = NA, te = NA, tX1 = NA, re = NA, rX1 = NA, 
+                                     pe = NA, pX1 = NA, le = NA, lX1 = NA))
 #=====================
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~Study of Bremer and van Kessel (1990)~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
@@ -423,138 +349,59 @@ ggplot(BKData, aes(Time, kec)) + geom_point(cex=6, pch=21, fill = "grey") +
   theme_min + ylab(expression(paste(italic(k[ec])~factor))) + xlab("Time (days)") +
   facet_wrap(~Treatment, scales="free")
 
-#Testing the volume-specific DEB model
-##Parameters estimation
-BKPred = read.csv("../PythonScripts/BremerKessel1990Pred.csv", header = F)
-colnames(BKPred) <- c("S", "CO2", "kec", "Cmic14") 
-BKPred$Time = rep(seq(0, 7, by = 0.1), times = 3)
-BKPred$Treatment = rep(c("LC", "HC", "HCHN"), each = length(seq(0, 7, by = 0.1)))
+#Model calibration
+##Reading respective python scripts
+source_python("../PythonScripts/IndividualStudies/Bremer1990ODESolv.py") 
+source_python("../PythonScripts/IndividualStudies/DEBmodelIso.py") 
+##Reading objective function
+source("IndividualStudies/BKObjective.R")
+##Optimization
+##First guess by MCMC 
+BKP <- modMCMC(BKObjective, p = Parms[,1], lower = Parms[, 2], upper = Parms[, 3], niter = 30000)
+summary(BKP)
+##Estimate
+ParmsBremer1990 <- abc_optim(fn = BKObjective, 
+                             par = as.numeric(summary(BKP)[c("mean"), ]), 
+                             lb = as.numeric(summary(BKP)[c("min"), ]), 
+                             ub = as.numeric(summary(BKP)[c("max"), ])) 
+ParmsBremer1990$par
+#==================================================#
+#Goodness of fit and simulations
+source("IndividualStudies/BKFit.R")
+SimBremer1990 <- BKFit(ParmsBremer1990$par)
+SimBremer1990$errors
+#=====================Visualizing the data with simulations
 
 ##Substrate concentration
 ggplot(BKData, aes(Time, S)) + geom_point(cex=6, pch=21, fill = "grey") +
   theme_min + ylab(expression(paste("Glucose (", mu, "mol(C) ", g^{-1}, ")"))) + xlab("Time (days)") +
-  geom_line(data = BKPred, aes(Time, S), lwd = 1.5) +
+  geom_line(data = (SimBremer1990$Simulation), aes(Time, S), lwd = 1.5) +
   facet_wrap(~Treatment, scales="free")
 ##Cumulative respiration
 ggplot(BKData, aes(Time, CO214cumul)) + geom_point(cex=6, pch=21, fill = "grey") +
   theme_min + ylab(expression(paste("Cumulative respiration (", mu, "mol(C) ", g^{-1}, ")"))) + xlab("Time (days)") +
-  geom_line(data = BKPred, aes(Time, CO2), lwd = 1.5) +
+  geom_line(data = (SimBremer1990$Simulation), aes(Time, CO2), lwd = 1.5) +
   facet_wrap(~Treatment, scales="free")
 ##Biomass 14
 ggplot(BKData, aes(Time, Cmic14)) + geom_point(cex=6, pch=21, fill = "grey") +
   theme_min + ylab(expression(paste(MB^{14}, "C(", mu, "mol(C) ", g^{-1}, ")"))) + xlab("Time (days)") +
-  geom_line(data = BKPred, aes(Time, Cmic14), lwd = 1.5) +
+  geom_line(data = (SimBremer1990$Simulation), aes(Time, Cmic14), lwd = 1.5) +
   facet_wrap(~Treatment, scales="free")
 #kec factor
 ggplot(BKData, aes(Time, kec)) + geom_point(cex=6, pch=21, fill = "grey") +
   theme_min + ylab(expression(paste(italic(k[ec])~factor))) + xlab("Time (days)") +
-  geom_line(data = BKPred, aes(Time, kec), lwd = 1.5) +
+  geom_line(data = (SimBremer1990$Simulation), aes(Time, kec), lwd = 1.5) +
   facet_grid(.~Treatment)
-
-#==============From global search
-##Parameters estimation
-BKPredGlobal = subset(GlobalFitDE, Study == "Bremer and van Kessel (1990)")
-BKPredGlobal$Time = rep(unique(BKData$Time), times = 3*4)
-BKPredGlobal$Treatment = rep(c("HC", "HCHN", "LC"), each = length(unique(BKData$Time))*4)
-
-##Substrate concentration
-ggplot(subset(BKPredGlobal, Variable == "S"), aes(Time, Observation)) + geom_point(cex=6, pch=21, fill = "grey") +
-  theme_min + ylab(expression(paste("Glucose (", mu, "mol(C) ", g^{-1}, ")"))) + xlab("Time (days)") +
-  geom_line(aes(Time, Simulation), lwd = 1.5) +
-  facet_wrap(~Treatment, scales="free")
-##Cumulative respiration
-ggplot(subset(BKPredGlobal, Variable == "CO2"), aes(Time, Observation)) + geom_point(cex=6, pch=21, fill = "grey") +
-  theme_min + ylab(expression(paste("Cumulative respiration (", mu, "mol(C) ", g^{-1}, ")"))) + xlab("Time (days)") +
-  geom_line(aes(Time, Simulation), lwd = 1.5) +
-  facet_wrap(~Treatment, scales="free")
-##Biomass 14
-ggplot(subset(BKPredGlobal, Variable == "MBC"), aes(Time, Observation)) + geom_point(cex=6, pch=21, fill = "grey") +
-  theme_min + ylab(expression(paste(MB^{14}, "C(", mu, "mol(C) ", g^{-1}, ")"))) + xlab("Time (days)") +
-  geom_line(aes(Time, Simulation), lwd = 1.5) +
-  facet_wrap(~Treatment, scales="free")
-#kec factor
-ggplot(subset(BKPredGlobal, Variable == "kec"), aes(Time, Observation)) + geom_point(cex=6, pch=21, fill = "grey") +
-  theme_min + ylab(expression(paste(italic(k[ec])~factor))) + xlab("Time (days)") +
-  geom_line(aes(Time, Simulation), lwd = 1.5) +
-  facet_grid(.~Treatment)
-
-#=====================
-# Study, Treatment, yA, Km, v, m, g, ce, nX1, 
-# iX1, ne, rX1, re, pX1, pe, lX1, le
-BKparsHC <- as.numeric(read.csv("../PythonScripts/BremerHCPars.csv", header = F))
+#=====================Save parameters
 parsAll <- rbind(parsAll, data.frame(Study = c("Bremer and van Kessel (1990)"),
-                                     Treatment = c("High carbon"),
-                                     yA = 1,  Km = BKparsHC[1], v = BKparsHC[2],
-                                     m = BKparsHC[3],  g = BKparsHC[4], ce = BKparsHC[5],  nX1 = BKparsHC[6],
-                                     iX1 = c(NA),   tX1 = c(NA), te = c(NA), rX1 = c(NA),
-                                     re = c(NA),  pX1 = c(NA), pe = c(NA),
-                                     lX1 = c(NA), le = c(NA)))
-BKparsHCHN <- as.numeric(read.csv("../PythonScripts/BremerHCHNPars.csv", header = F))
-parsAll <- rbind(parsAll, data.frame(Study = c("Bremer and van Kessel (1990)"),
-                                     Treatment = c("High carbon/High nitrogen"),
-                                     yA = 1,  Km = BKparsHCHN[1], v = BKparsHCHN[2],
-                                     m = BKparsHCHN[3],  g = BKparsHCHN[4], ce = BKparsHCHN[5],  nX1 = BKparsHCHN[6],
-                                     iX1 = c(NA),   tX1 = c(NA), te = c(NA), rX1 = c(NA),
-                                     re = c(NA),  pX1 = c(NA), pe = c(NA),
-                                     lX1 = c(NA), le = c(NA)))
-BKparsLC <- as.numeric(read.csv("../PythonScripts/BremerLCPars.csv", header = F))
-parsAll <- rbind(parsAll, data.frame(Study = c("Bremer and van Kessel (1990)"),
-                                     Treatment = c("Low carbon"),
-                                     yA = 1,  Km = BKparsLC[1], v = BKparsLC[2],
-                                     m = BKparsLC[3],  g = BKparsLC[4], ce = BKparsLC[5],  nX1 = BKparsLC[6],
-                                     iX1 = c(NA),   tX1 = c(NA), te = c(NA), rX1 = c(NA),
-                                     re = c(NA),  pX1 = c(NA), pe = c(NA),
-                                     lX1 = c(NA), le = c(NA)))
-#=====================
-
-#Predicting ken factor
-##ken factor
-ggplot(BKData, aes(kec, ken)) + geom_point(cex=6, pch=21, aes(fill = Treatment)) +
-  theme_min + ylab(expression(paste(italic(k[en])~factor))) +
-  xlab(expression(paste(italic(k[ec])~factor))) + facet_grid(.~Treatment)
-
-##Estimating equation parameters
-###ken = (nX1*CNe + CNX1*((nX1 - kec)/(kec - 1)))/(CNe + CNX1*((nX1 - kec)/(kec - 1)))
-###Add kec estimates to original data frame
-BKData$nX1<-NA
-for(i in 1:nrow(BKData)){
-  if(BKData$Treatment[i]=="HC"){
-    BKData$nX1[i]<-BKparsHC[6]
-  }else{
-    if(BKData$Treatment[i]=="HCHN"){
-      BKData$nX1[i]<-BKparsHCHN[6]
-    }else{
-      BKData$nX1[i]<-BKparsLC[6]
-    }
-  }
-}
-###Estimation function
-kenFun<-function(data){
-  objective<-function(x){
-    return(sum((data$ken - (BKparsLC[6]*x[1] + x[2]*((BKparsLC[6] - data$kec)/(data$kec - 1)))/(x[1] + x[2]*((BKparsLC[6] - data$kec)/(data$kec - 1))))^2, na.rm = T))
-  }
-  ###Parameters estimation using MCMC
-  mcmc<-modMCMC(f=objective, p=c(2, 5), 
-                lower=c(0.5, 0.5), 
-                upper=c(50, 50), niter=100000)
-  ###Improving the estimation using differential evolution algorithm
-  parDE<-DEoptim(fn=objective, lower=as.numeric(summary(mcmc)["min",]), upper=as.numeric(summary(mcmc)["max",]), 
-                    control = c(itermax = 10000, steptol = 50, reltol = 1e-8, trace=FALSE, strategy=3, NP=250))
-  return(parDE$optim$bestmem)
-  ##or artificial bee colony algorithm
-  # parABC<-abc_optim(fn=objective, par=as.numeric(summary(mcmc)["mean",]), 
-  #                   lb=as.numeric(summary(mcmc)["min",]), 
-  #                   ub=as.numeric(summary(mcmc)["max",]), maxCycle = 1e6)
-  # return(parABC$par)
-}
-#Across all treatments
-kenPars<-kenFun(subset(BKData))
-#Visualization
-ggplot(BKData, aes(kec, ken)) + geom_point(cex=6, pch=21, aes(fill = Treatment)) +
-  theme_min + ylab(expression(paste(italic(k[en])~factor))) +
-  xlab(expression(paste(italic(k[ec])~factor))) + 
-  stat_function(fun = function(x){(BKparsLC[6]*kenPars[1] + kenPars[2]*((BKparsLC[6] - x)/(x - 1)))/(kenPars[1] + kenPars[2]*((BKparsLC[6] - x)/(x - 1)))})
-
+                                     Treatment = c("Glucose"),
+                                     Im = ParmsBremer1990$par[1], Km = ParmsBremer1990$par[2], 
+                                     yA = ParmsBremer1990$par[3],
+                                     Em = ParmsBremer1990$par[4], m = ParmsBremer1990$par[5], 
+                                     g = ParmsBremer1990$par[6], 
+                                     ne = ParmsBremer1990$par[7], nX1 = ParmsBremer1990$par[8], 
+                                     iX1 = NA, te = NA, tX1 = NA, re = NA, rX1 = NA, 
+                                     pe = NA, pX1 = NA, le = NA, lX1 = NA))
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~Marstorp and Witter 1999~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
@@ -565,7 +412,7 @@ MData = read.csv("../SoilMBVariabilityData/Marstorp1999.csv")
 ggplot(MData, aes(Time, S)) + geom_point(cex=6, pch=21, fill = "grey") +
   theme_min + ylab(expression(paste("Glucose (", mu, "mol(C) ", g^{-1}, ")"))) + xlab("Time (days)") 
 ##Cmic 12
-ggplot(MData, aes(Time, Cmic12)) + geom_point(cex=6, pch=21, fill = "grey") +
+ggplot(MData, aes(Time, Flush)) + geom_point(cex=6, pch=21, fill = "grey") +
   theme_min + ylab(expression(paste("Flush (", mu, "mol(C) ", g^{-1}, ")"))) + xlab("Time (days)") +
   ylim(0, 15)
 ##Cmic 14
@@ -578,77 +425,93 @@ ggplot(MData, aes(Time, CO212cumul)) + geom_point(cex=6, pch=21, fill = "grey") 
 ggplot(MData, aes(Time, DNA)) + geom_point(cex=6, pch=21, fill = "grey") +
   theme_min + ylab(expression(paste("DNA (", mu, "mol(C) ", g^{-1}, ")"))) + xlab("Time (days)") 
 
-#Testing the volume-specific DEB model
-##Parameters estimation
-MPred = read.csv("../PythonScripts/Marstorp1999Pred.csv", header = F)
-colnames(MPred) <- c("S", "CO2", "Cmic", "DNA") 
-MPred$Time = seq(0, 9, by = 0.05)
-
-##Compare to Monod model simulation
-MPredM = read.csv("../PythonScripts/Marstorp1999PredM.csv", header = F)
-colnames(MPredM) <- c("S", "CO2", "Cmic", "DNA") 
-MPredM$Time = seq(0, 9, by = 0.05)
-##Compare to Pirt model simulation
-MPredP = read.csv("../PythonScripts/Marstorp1999PredP.csv", header = F)
-colnames(MPredP) <- c("S", "CO2", "Cmic", "DNA") 
-MPredP$Time = seq(0, 9, by = 0.05)
-
-##Substrate concentration
-ggplot(MData, aes(Time, S)) + geom_point(cex=6, pch=21, fill = "grey") +
-  theme_min + ylab(expression(paste("Glucose (", mu, "mol(C) ", g^{-1}, ")"))) + xlab("Time (days)") +
-  geom_line(data = MPred, aes(Time, S), lwd = 1.5) + 
-  geom_line(data = MPredM, aes(Time, S), lwd = 1.5, colour = "grey") + 
-  geom_line(data = MPredP, aes(Time, S), lwd = 1.5, colour = "grey", lty = 2)
-##Cumulative respiration
-ggplot(MData, aes(Time, CO212cumul)) + geom_point(cex=6, pch=21, fill = "grey") +
-  theme_min + ylab(expression(paste("Cumulative respiration (", mu, "mol(C) ", g^{-1}, ")"))) + xlab("Time (days)") +
-  geom_line(data = MPred, aes(Time, CO2), lwd = 1.5) + 
-  geom_line(data = MPredM, aes(Time, CO2), lwd = 1.5, colour = "grey") +
-  geom_line(data = MPredP, aes(Time, CO2), lwd = 1.5, colour = "grey", lty = 2)
-##Cmic
-ggplot(MData, aes(Time, Cmic12 + Cmic14)) + geom_point(cex=6, pch=21, fill = "grey") +
-  theme_min + ylab(expression(paste("Flush (", mu, "mol(C) ", g^{-1}, ")"))) + xlab("Time (days)") +
-  ylim(0, 15) + geom_line(data = MPred, aes(Time, Cmic), lwd = 1.5) + 
-  geom_line(data = MPredM, aes(Time, Cmic), lwd = 1.5, color = "grey") +
-  geom_line(data = MPredP, aes(Time, Cmic), lwd = 1.5, color = "grey", lty = 2)
-##DNA
-ggplot(MData, aes(Time, DNA)) + geom_point(cex=6, pch=21, fill = "grey") +
-  theme_min + ylab(expression(paste("DNA (", mu, "mol(C) ", g^{-1}, ")"))) + xlab("Time (days)") +
-  geom_line(data = MPred, aes(Time, DNA), lwd = 1.5) + 
-  geom_line(data = MPredM, aes(Time, DNA), lwd = 1.5, colour = "grey") +
-  geom_line(data = MPredP, aes(Time, DNA), lwd = 1.5, colour = "grey", lty = 2)
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-#=====================
-# Study, Treatment, yA, Km, v, m, g, ce, nX1, 
-# iX1, ne, rX1, re, pX1, pe, lX1, le
-Mpars <- as.numeric(read.csv("../PythonScripts/Marstorp1999Pars.csv", header = F))
-parsAll <- rbind(parsAll, data.frame(Study = c("Marstorp and Witter 1999"),
+#Model calibration
+##Reading respective python scripts
+source_python("../PythonScripts/IndividualStudies/DEBmodel.py") 
+source_python("../PythonScripts/IndividualStudies/Marstorp1999ODESolv.py") 
+##Reading objective function
+source("IndividualStudies/MObjective.R")
+##Optimization
+##First guess by MCMC 
+MP <- modMCMC(MObjective, p = c(Parms[,1], 0.1), 
+               lower = c(Parms[, 2], 0),
+               upper = c(Parms[, 3], 1), niter = 30000)
+summary(MP)
+##Estimate
+ParmsMarstorp1999 <- abc_optim(fn = MObjective, 
+                               par = as.numeric(summary(MP)[c("mean"), ]), 
+                               lb = as.numeric(summary(MP)[c("min"), ]), 
+                               ub = as.numeric(summary(MP)[c("max"), ])) 
+ParmsMarstorp1999$par
+#==================================================#
+#Goodness of fit and simulations
+source("IndividualStudies/MFit.R")
+SimMarstorp1999 <- MFit(ParmsMarstorp1999$par)
+SimMarstorp1999$errors
+#=====================Save parameters
+parsAll <- rbind(parsAll, data.frame(Study = c("Marstorp and Witter (1999)"),
                                      Treatment = c("Glucose"),
-                                     yA = Mpars[1],  Km = Mpars[2], v = Mpars[3],
-                                     m = Mpars[4],  g = Mpars[5], ce = Mpars[6],  nX1 = Mpars[7],
-                                     iX1 = c(MData$DNAinit[1]*Mpars[7]/MData$Cmicinit[1]),  
-                                     tX1 = c(NA), te = c(NA), rX1 = c(NA),
-                                     re = c(NA),  pX1 = c(NA), pe = c(NA),
-                                     lX1 = c(NA), le = c(NA)))
-
+                                     Im = ParmsMarstorp1999$par[1], Km = ParmsMarstorp1999$par[2], 
+                                     yA = ParmsMarstorp1999$par[3],
+                                     Em = ParmsMarstorp1999$par[4], m = ParmsMarstorp1999$par[5], 
+                                     g = ParmsMarstorp1999$par[6], 
+                                     ne = ParmsMarstorp1999$par[7], nX1 = ParmsMarstorp1999$par[8], 
+                                     iX1 = ParmsMarstorp1999$par[9], te = NA, tX1 = NA, re = NA, rX1 = NA, 
+                                     pe = NA, pX1 = NA, le = NA, lX1 = NA))
 #=====================
 
 #=================================
 # Models comparison - F statistic
 #=================================
+##Monod model
+source_python("../PythonScripts/IndividualStudies/Monod.py")
+source_python("../PythonScripts/IndividualStudies/Marstorp1999ODESolvM.py")
+source("./IndividualStudies/MObjectiveM.R")
+##Optimization
+##First guess by MCMC 
+MPM <- modMCMC(MObjectiveM, p = c(1, 25, 0.5, 1e-3, 0.3, 0.01), 
+              lower = c(1e-3, 0.1, 0.05, 1e-8, 0, 0),
+              upper = c(10, 3000, 1, 1, 1, 1), niter = 30000)
+##Estimate
+ParmsMarstorp1999M <- abc_optim(fn = MObjectiveM, par = as.numeric(summary(MPM)["mean", ]), 
+                                lb = as.numeric(summary(MPM)["min", ]), 
+                                ub = as.numeric(summary(MPM)["max", ])) 
+ParmsMarstorp1999M$par
+#Goodness of fit and simulations
+source("IndividualStudies/MFitM.R")
+SimMarstorp1999M <- MFitM(ParmsMarstorp1999M$par)
+SimMarstorp1999M$errors
+
+##Pirt model
+source_python("../PythonScripts/IndividualStudies/Pirt.py")
+source_python("../PythonScripts/IndividualStudies/Marstorp1999ODESolvP.py")
+source("./IndividualStudies/MObjectiveP.R")
+##Optimization
+##First guess by MCMC 
+MPP <- modMCMC(MObjectiveP, p = c(1, 25, 0.5, 1e-3, 1e-3, 0.3, 0.01), 
+               lower = c(1e-3, 0.1, 0.05, 1e-8, 1e-8, 0, 0),
+               upper = c(10, 3000, 1, 1, 1, 1, 1), niter = 30000)
+##Estimate
+ParmsMarstorp1999P <- abc_optim(fn = MObjectiveP, par = as.numeric(summary(MPP)["mean", ]), 
+                                lb = as.numeric(summary(MPP)["min", ]), 
+                                ub = as.numeric(summary(MPP)["max", ])) 
+ParmsMarstorp1999P$par
+#Goodness of fit and simulations
+source("IndividualStudies/MFitP.R")
+SimMarstorp1999P <- MFitP(ParmsMarstorp1999P$par)
+SimMarstorp1999P$errors
+
 #No. of observations
-nt = nrow(MData[!is.na(MData$CO212cumul), ]) + nrow(MData[!is.na(MData$S), ]) +
-  nrow(MData[!is.na(MData$DNA), ]) + nrow(MData[!is.na(MData$Cmic12), ])
+nt = SimMarstorp1999$errors[6]
 #DEB model
-DEBSSRes = 20.81570798 #Weighted residual sum of squares from python (all variables standardized to 0 mean and unit variance)
-DEBpar = 7.01
+DEBSSRes = SimMarstorp1999$errors[5] 
+DEBpar = SimMarstorp1999$errors[7]
 #Monod model
-MSSRes = 40.51293538 #Weighted residual sum of squares from python (all variables standardized to 0 mean and unit variance)
-Mpar = 6
+MSSRes = SimMarstorp1999M$errors[5] 
+Mpar = SimMarstorp1999M$errors[7]
 #Pirt model
-PSSRes = 44.10809363 #Weighted residual sum of squares from python (all variables standardized to 0 mean and unit variance)
-Ppar = 7
+PSSRes = SimMarstorp1999P$errors[5] 
+Ppar = SimMarstorp1999P$errors[7]
 
 #DEB vs Monod
 ####F value =  (M1ss - M2ss)*(nt - M2p)/M2ss/(M2p - M1p)
@@ -669,175 +532,40 @@ pf(q=(PSSRes - DEBSSRes)*(nt - DEBpar)/DEBSSRes/(DEBpar - Ppar),
    df1=(DEBpar - Ppar), 
    df2=(nt - DEBpar), 
    lower.tail=F)
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-##Plot kec and kdna as a function of relative growth rate according to estimated parameters
-MPars = as.numeric(read.csv("../PythonScripts/Marstorp1999Pars.csv", header = F))
-iX1 = MData$DNAinit[1]*MPars[7]/MData$Cmicinit[1]
-MPars = append(MPars, iX1)
-names(MPars) <- c("yA", "Km", "v", "m", "g", "ce", "nX1", "iX1")
-e = seq(0, 1, by = 0.01)
-muMAX = (MPars[["v"]] - MPars[["m"]]*MPars[["g"]])/(1 + MPars[["g"]]) 
-mu = pmax((MPars[["v"]]*e - MPars[["m"]]*MPars[["g"]])/(e + MPars[["g"]]), 0)
-muRel = pmax((MPars[["v"]]*e - MPars[["m"]]*MPars[["g"]])/(e + MPars[["g"]])/muMAX, 0)
-kec = (MPars[["nX1"]]/4 + e)/(0.25 + e)
-kDNA = (MPars[["iX1"]]/4)/(0.25 + e)
 
-###Absolute values
-ConversionsPreds1 <- data.frame(muRel, kec, kDNA)
-ConversionsPredsL1<-melt(ConversionsPreds1, id.vars = "muRel")
-ggplot(ConversionsPredsL1, aes(muRel, value)) + geom_line(aes(color = variable), lwd = 1.5, show.legend = F) +
-  theme_min + xlab(expression(paste(frac(mu,mu[MAX])))) + 
-  ylab(expression(paste("Conversion factor"))) + 
-  facet_wrap(~variable, scales="free")
-###Relative values
-ConversionsPreds2 <- data.frame(muRel, kec=kec/kec[1], kDNA=kDNA/kDNA[1])
-ConversionsPredsL2<-melt(ConversionsPreds2, id.vars = "muRel")
-ggplot(ConversionsPredsL2, aes(muRel, value)) + geom_line(aes(color = variable), lwd = 1.5) +
-  theme_min + xlab(expression(paste(frac(mu,mu[MAX])))) + 
-  ylab(expression(paste(Delta, "Conversion factor"))) + 
-  scale_y_log10() + theme(legend.title = element_blank(), legend.position = c(0.8, 0.5)) 
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~Blagodatskaya et al. 2014~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
-#Data
-BData = read.csv("../SoilMBVariabilityData/Blagodatskaya2014.csv")
-#Visualizing the data
+#=====================Visualizing the data with simulations
+
+##Substrate concentration
+ggplot(MData, aes(Time, S)) + geom_point(cex=6, pch=21, fill = "grey") +
+  theme_min + ylab(expression(paste("Glucose (", mu, "mol(C) ", g^{-1}, ")"))) + xlab("Time (days)") +
+  geom_line(data = (SimMarstorp1999$Simulation), aes(Time, S), lwd = 1.5) +
+  geom_line(data = (SimMarstorp1999M$Simulation), aes(Time, S), lwd = 1.5, color = "grey") +
+  geom_line(data = (SimMarstorp1999P$Simulation), aes(Time, S), lwd = 1.5, color = "grey30", lty = 2)
 ##Cumulative respiration
-ggplot(BData, aes(Time, CO2)) + geom_point(cex=6, pch=21, aes(fill = Treatment)) + 
-  scale_fill_manual(values = c("white", "grey")) +
+ggplot(MData, aes(Time, CO212cumul)) + geom_point(cex=6, pch=21, fill = "grey") +
   theme_min + ylab(expression(paste("Cumulative respiration (", mu, "mol(C) ", g^{-1}, ")"))) + xlab("Time (days)") +
-  theme(legend.title = element_blank(), legend.position = c(0.2, 0.8))
+  geom_line(data = (SimMarstorp1999$Simulation), aes(Time, CO2), lwd = 1.5) +
+  geom_line(data = (SimMarstorp1999M$Simulation), aes(Time, CO2), lwd = 1.5, color = "grey") +
+  geom_line(data = (SimMarstorp1999P$Simulation), aes(Time, CO2), lwd = 1.5, color = "grey30", lty = 2)
+##Cmic
+ggplot(MData, aes(Time, Flush)) + geom_point(cex=6, pch=21, fill = "grey") +
+  theme_min + ylab(expression(paste("Flush (", mu, "mol(C) ", g^{-1}, ")"))) + xlab("Time (days)") +
+  ylim(0, 15) + geom_line(data = (SimMarstorp1999$Simulation), aes(Time, Flush), lwd = 1.5) +
+  geom_line(data = (SimMarstorp1999M$Simulation), aes(Time, Flush), lwd = 1.5, color = "grey") +
+  geom_line(data = (SimMarstorp1999P$Simulation), aes(Time, Flush), lwd = 1.5, color = "grey30", lty = 2)
 ##DNA
-ggplot(BData, aes(Time, DNA)) + geom_point(cex=6, pch=21, aes(fill = Treatment)) + 
-  scale_fill_manual(values = c("white", "grey")) +
+ggplot(MData, aes(Time, DNA)) + geom_point(cex=6, pch=21, fill = "grey") +
   theme_min + ylab(expression(paste("DNA (", mu, "mol(C) ", g^{-1}, ")"))) + xlab("Time (days)") +
-  theme(legend.title = element_blank(), legend.position = c(0.2, 0.8))
+  geom_line(data = (SimMarstorp1999$Simulation), aes(Time, DNA), lwd = 1.5) +
+  geom_line(data = (SimMarstorp1999M$Simulation), aes(Time, DNA), lwd = 1.5, color = "grey") +
+  geom_line(data = (SimMarstorp1999P$Simulation), aes(Time, DNA), lwd = 1.5, color = "grey30", lty = 2)
+##DNA/Flush
+ggplot(MData, aes(Time, DNA*1000/Flush)) + geom_point(cex=6, pch=21, fill = "grey") +
+  theme_min + ylab(expression(paste(frac(DNA, CHCl[3]~Flush), "   (", frac(mmol, mol), ")"))) + xlab("Time (days)") +
+  geom_line(data = (SimMarstorp1999$Simulation), aes(Time, DNA*1000/Flush), lwd = 1.2) 
+  #geom_line(data = (SimMarstorp1999M$Simulation), aes(Time, DNA*1000/Flush), lwd = 1.5, color = "grey") +
+  #geom_line(data = (SimMarstorp1999P$Simulation), aes(Time, DNA*1000/Flush), lwd = 1.5, color = "grey30", lty = 2)
 
-#Testing the volume-specific DEB model
-##Parameters estimation
-BPred = read.csv("../PythonScripts/Blagodatskaya2014Pred.csv", header = F)
-colnames(BPred) <- c("CO2", "DNA") 
-BPred$Time = rep(seq(0, 2, by = 0.01), 2)
-BPred$Treatment = c(rep("Rhizosphere", times = length(seq(0, 2, by = 0.01))),
-                    rep("Soil", times = length(seq(0, 2, by = 0.01))))
-#Compare to Monod model
-BPredM = read.csv("../PythonScripts/Blagodatskaya2014PredM.csv", header = F)
-colnames(BPredM) <- c("CO2", "DNA") 
-BPredM$Time = rep(seq(0, 2, by = 0.01), 2)
-BPredM$Treatment = c(rep("Rhizosphere", times = length(seq(0, 2, by = 0.01))),
-                    rep("Soil", times = length(seq(0, 2, by = 0.01))))
-#Compare to Pirt model
-BPredP = read.csv("../PythonScripts/Blagodatskaya2014PredP.csv", header = F)
-colnames(BPredP) <- c("CO2", "DNA") 
-BPredP$Time = rep(seq(0, 2, by = 0.01), 2)
-BPredP$Treatment = c(rep("Rhizosphere", times = length(seq(0, 2, by = 0.01))),
-                     rep("Soil", times = length(seq(0, 2, by = 0.01))))
-
-##Cumulative respiration
-ggplot(BData, aes(Time, CO2)) + geom_point(cex=6, pch=21, aes(fill = Treatment)) + 
-  scale_fill_manual(values = c("white", "grey")) +
-  theme_min + ylab(expression(paste("Cumulative respiration (", mu, "mol(C) ", g^{-1}, ")"))) + xlab("Time (days)") +
-  theme(legend.title = element_blank(), legend.position = c(0.2, 0.8)) + xlim(0, 1.6) + 
-  geom_line(data = BPred, aes(Time, CO2, color = Treatment)) + scale_color_manual(values = c("black", "grey")) +
-  geom_line(data = BPredM, aes(Time, CO2), lty = 2) +
-  geom_line(data = BPredP, aes(Time, CO2), lty = 3)
-##DNA
-ggplot(BData, aes(Time, DNA)) + geom_point(cex=6, pch=21, aes(fill = Treatment)) + 
-  scale_fill_manual(values = c("white", "grey")) +
-  theme_min + ylab(expression(paste("DNA (", mu, "mol(C) ", g^{-1}, ")"))) + xlab("Time (days)") +
-  theme(legend.title = element_blank(), legend.position = c(0.2, 0.8)) + xlim(0, 1.6) +
-  geom_line(data = BPred, aes(Time, DNA, color = Treatment)) + scale_color_manual(values = c("black", "grey")) +
-  geom_line(data = BPredM, aes(Time, DNA, color = Treatment), lty = 2) +
-  geom_line(data = BPredP, aes(Time, DNA, color = Treatment), lty = 3)
-
-#=====================
-
-#=================================
-# Models comparison - F statistic
-#=================================
-#~~~~~~~~~~~~~~Rhizosphere soil
-#No. of observations
-nt = nrow(BData[(BData$Treatment == "Rhizosphere" & !is.na(BData$CO2)), ]) + 
-  nrow(BData[(BData$Treatment == "Rhizosphere" & !is.na(BData$DNA)), ])
-#DEB model
-DEBSSRes = 2.87709487 #Weighted residual sum of squares from python (all variables standardized to 0 mean and unit variance)
-DEBpar = 7
-#Monod model
-MSSRes = 3.75097875 #Weighted residual sum of squares from python (all variables standardized to 0 mean and unit variance)
-Mpar = 5
-#Pirt model
-PSSRes = 3.75062408 #Weighted residual sum of squares from python (all variables standardized to 0 mean and unit variance)
-Ppar = 6
-
-#DEB vs Monod
-####F value =  (M1ss - M2ss)*(nt - M2p)/M2ss/(M2p - M1p)
-(MSSRes - DEBSSRes)*(nt - DEBpar)/DEBSSRes/(DEBpar - Mpar)
-
-####associated p value
-pf(q=(MSSRes - DEBSSRes)*(nt - DEBpar)/DEBSSRes/(DEBpar - Mpar), 
-   df1=(DEBpar - Mpar), 
-   df2=(nt - DEBpar), 
-   lower.tail=F)
-
-#DEB vs Pirt
-####F value =  (M1ss - M2ss)*(nt - M2p)/M2ss/(M2p - M1p)
-(MSSRes - DEBSSRes)*(nt - DEBpar)/DEBSSRes/(DEBpar - Mpar)
-
-####associated p value
-pf(q=(PSSRes - DEBSSRes)*(nt - DEBpar)/DEBSSRes/(DEBpar - Ppar), 
-   df1=(DEBpar - Ppar), 
-   df2=(nt - DEBpar), 
-   lower.tail=F)
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-#~~~~~~~~~~~~~~Root free soil
-#No. of observations
-nt = nrow(BData[(BData$Treatment != "Rhizosphere" & !is.na(BData$CO2)), ]) + 
-  nrow(BData[(BData$Treatment != "Rhizosphere" & !is.na(BData$DNA)), ])
-#DEB model
-DEBSSRes = 2.59638842 #Weighted residual sum of squares from python (all variables standardized to 0 mean and unit variance)
-DEBpar = 7
-#Monod model
-MSSRes = 4.18352029 #Weighted residual sum of squares from python (all variables standardized to 0 mean and unit variance)
-Mpar = 5
-#Pirt model
-PSSRes = 4.21367685 #Weighted residual sum of squares from python (all variables standardized to 0 mean and unit variance)
-Ppar = 6
-
-#DEB vs Monod
-####F value =  (M1ss - M2ss)*(nt - M2p)/M2ss/(M2p - M1p)
-(MSSRes - DEBSSRes)*(nt - DEBpar)/DEBSSRes/(DEBpar - Mpar)
-
-####associated p value
-pf(q=(MSSRes - DEBSSRes)*(nt - DEBpar)/DEBSSRes/(DEBpar - Mpar), 
-   df1=(DEBpar - Mpar), 
-   df2=(nt - DEBpar), 
-   lower.tail=F)
-
-#DEB vs Pirt
-####F value =  (M1ss - M2ss)*(nt - M2p)/M2ss/(M2p - M1p)
-(MSSRes - DEBSSRes)*(nt - DEBpar)/DEBSSRes/(DEBpar - Mpar)
-
-####associated p value
-pf(q=(PSSRes - DEBSSRes)*(nt - DEBpar)/DEBSSRes/(DEBpar - Ppar), 
-   df1=(DEBpar - Ppar), 
-   df2=(nt - DEBpar), 
-   lower.tail=F)
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-#=====================
-# Study, Treatment, yA, Km, v, m, g, ce, nX1, 
-# iX1, ne, rX1, re, pX1, pe, lX1, le
-BparsR <- as.numeric(read.csv("../PythonScripts/bla_debparsR.csv", header = F))
-BparsS <- as.numeric(read.csv("../PythonScripts/bla_debparsS.csv", header = F))
-parsAll <- rbind(parsAll, data.frame(Study = c("Blagodatskaya et al. (2014)"),
-                                     Treatment = c("Rhizosphere", "Soil"),
-                                     yA = c(BparsR[1], BparsS[1]),  Km = c(BparsR[2], BparsS[2]), v = c(BparsR[3], BparsS[3]),
-                                     m = c(BparsR[4], BparsS[4]),  g = c(BparsR[5], BparsS[5]), ce = c(BparsR[6], BparsS[6]),  nX1 = c(NA, NA),
-                                     iX1 = c(BparsR[7], BparsS[7]),  
-                                     tX1 = c(NA, NA), te = c(NA, NA), rX1 = c(NA, NA),
-                                     re = c(NA, NA),  pX1 = c(NA, NA), pe = c(NA, NA),
-                                     lX1 = c(NA, NA), le = c(NA, NA)))
-
-#=====================
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~Ziegler et al. (2005)~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
@@ -854,76 +582,90 @@ ggplot(ZData, aes(Time, CO2cumul)) + geom_point(cex=6, pch=21, fill = "grey") +
 ggplot(ZData, aes(Time, PLFA)) + geom_point(cex=6, pch=21, fill = "grey") +
   theme_min + ylab(expression(paste("PLFA (", mu, "mol(C) ", g^{-1}, ")"))) + xlab("Time (days)")
 
-#================================================================
-#Testing the volume-specific DEB model
-#================================================================
-##Parameters estimation
-ZPred = read.csv("../PythonScripts/Ziegler2005Pred.csv", header = F)
-colnames(ZPred) <- c("S", "e", "X1", "B", "CO2cumul", "PLFA") 
-ZPred$Time = seq(0, 2, by = 0.05)
-
-##Compare to Monod model
-ZPredM = read.csv("../PythonScripts/Ziegler2005PredM.csv", header = F)
-colnames(ZPredM) <- c("S", "CO2cumul", "PLFA") 
-ZPredM$Time = seq(0, 2, by = 0.05)
-
-##Compare to Pirt model
-ZPredP = read.csv("../PythonScripts/Ziegler2005PredP.csv", header = F)
-colnames(ZPredP) <- c("S", "CO2cumul", "PLFA") 
-ZPredP$Time = seq(0, 2, by = 0.05)
-
-##Visualizing the fit
-##Glucose
-ggplot(ZData, aes(Time, S)) + geom_point(cex=6, pch=21, fill = "grey") +
-  theme_min + ylab(expression(paste("Glucose (", mu, "mol(C) ", g^{-1}, ")"))) + xlab("Time (days)") +
-  geom_line(data = ZPred, aes(Time, S), lwd = 1.5) +
-  geom_line(data = ZPredM, aes(Time, S), lwd = 1.5, colour = "grey") +
-  geom_line(data = ZPredP, aes(Time, S), lwd = 1.5, colour = "grey", lty = 2) 
-##Cumulative respiration
-ggplot(ZData, aes(Time, CO2cumul)) + geom_point(cex=6, pch=21, fill = "grey") +
-  theme_min + ylab(expression(paste("Cumulative respiration (", mu, "mol(C) ", g^{-1}, ")"))) + xlab("Time (days)") +
-  geom_line(data = ZPred, aes(Time, CO2cumul), lwd = 1.5) +
-  geom_line(data = ZPredM, aes(Time, CO2cumul), lwd = 1.5, colour = "grey") +
-  geom_line(data = ZPredP, aes(Time, CO2cumul), lwd = 1.5, colour = "grey", lty = 2) 
-##PLFA
-ggplot(ZData, aes(Time, PLFA)) + geom_point(cex=6, pch=21, fill = "grey") +
-  theme_min + ylab(expression(paste("PLFA (", mu, "mol(C) ", g^{-1}, ")"))) + xlab("Time (days)") +
-  geom_line(data = ZPred, aes(Time, PLFA), lwd = 1.5) +
-  geom_line(data = ZPredM, aes(Time, PLFA), lwd = 1.5, colour = "grey") +
-  geom_line(data = ZPredP, aes(Time, PLFA), lwd = 1.5, colour = "grey", lty = 2) 
-
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-#=====================
-# Study, Treatment, yA, Km, v, m, g, ce, nX1, 
-# iX1, ne, rX1, re, pX1, pe, lX1, le
-Zpars <- as.numeric(read.csv("../PythonScripts/Ziegler2005Pars.csv", header = F))
+#Model calibration
+##Reading respective python scripts
+source_python("../PythonScripts/IndividualStudies/Ziegler2005ODESolv.py") 
+##Reading objective function
+source("IndividualStudies/ZObjective.R")
+##Optimization
+##First guess by MCMC 
+ZP <- modMCMC(ZObjective, p = c(Parms[1:6,1], 0.1, 0.1), 
+              lower = c(Parms[1:6, 2], 0, 0),
+              upper = c(Parms[1:6, 3], 1, 1), niter = 30000)
+summary(ZP)
+##Estimate
+ParmsZiegler2014 <- abc_optim(fn = ZObjective, 
+                               par = as.numeric(summary(ZP)[c("mean"), ]), 
+                               lb = as.numeric(summary(ZP)[c("min"), ]), 
+                               ub = as.numeric(summary(ZP)[c("max"), ])) 
+ParmsZiegler2014$par
+#==================================================#
+#Goodness of fit and simulations
+source("IndividualStudies/ZFit.R")
+SimZiegler2014 <- ZFit(ParmsZiegler2014$par)
+SimZiegler2014$errors
+#=====================Save parameters
 parsAll <- rbind(parsAll, data.frame(Study = c("Ziegler et al. (2005)"),
                                      Treatment = c("Glucose"),
-                                     yA = Zpars[1],  Km = Zpars[2], v = Zpars[3],
-                                     m = Zpars[4],  g = Zpars[5], ce = Zpars[6],  nX1 = c(NA),
-                                     iX1 = c(NA), tX1 = c(NA), te = c(NA), rX1 = c(NA),
-                                     re = c(NA),  pX1 = c(NA), pe = c(NA),
-                                     lX1 = Zpars[7], le = Zpars[8]))
-
+                                     Im = ParmsZiegler2014$par[1], Km = ParmsZiegler2014$par[2], 
+                                     yA = ParmsZiegler2014$par[3],
+                                     Em = ParmsZiegler2014$par[4], m = ParmsZiegler2014$par[5], 
+                                     g = ParmsZiegler2014$par[6], 
+                                     ne = NA, nX1 = NA, 
+                                     iX1 = NA, te = NA, tX1 = NA, re = NA, rX1 = NA, 
+                                     pe = NA, pX1 = NA, 
+                                     le = ParmsZiegler2014$par[7], lX1 = ParmsZiegler2014$par[8]))
 #=====================
 
 #=================================
 # Models comparison - F statistic
 #=================================
+##Monod model
+source_python("../PythonScripts/IndividualStudies/Ziegler2005ODESolvM.py")
+source("./IndividualStudies/ZObjectiveM.R")
+##Optimization
+##First guess by MCMC 
+ZPM <- modMCMC(ZObjectiveM, p = c(1, 25, 0.5, 1e-3, 0.01), 
+               lower = c(1e-3, 0.1, 0.05, 1e-8, 0),
+               upper = c(100, 3000, 1, 1, 1), niter = 30000)
+##Estimate
+ParmsZiegler2005M <- abc_optim(fn = ZObjectiveM, par = as.numeric(summary(ZPM)["mean", ]), 
+                                lb = as.numeric(summary(ZPM)["min", ]), 
+                                ub = as.numeric(summary(ZPM)["max", ])) 
+ParmsZiegler2005M$par
+#Goodness of fit and simulations
+source("IndividualStudies/ZFitM.R")
+SimZiegler2005M <- ZFitM(ParmsZiegler2005M$par)
+SimZiegler2005M$errors
+
+##Pirt model
+source_python("../PythonScripts/IndividualStudies/Ziegler2005ODESolvP.py")
+source("./IndividualStudies/ZObjectiveP.R")
+##Optimization
+##First guess by MCMC 
+ZPP <- modMCMC(ZObjectiveP, p = c(1, 25, 0.5, 1e-3, 1e-3, 0.01), 
+               lower = c(1e-3, 0.1, 0.05, 1e-8, 1e-8, 0),
+               upper = c(100, 3000, 1, 1, 1, 1), niter = 30000)
+##Estimate
+ParmsZiegler2005P <- abc_optim(fn = ZObjectiveP, par = as.numeric(summary(ZPP)["mean", ]), 
+                                lb = as.numeric(summary(ZPP)["min", ]), 
+                                ub = as.numeric(summary(ZPP)["max", ])) 
+ParmsZiegler2005P$par
+#Goodness of fit and simulations
+source("IndividualStudies/ZFitP.R")
+SimZiegler2005P <- ZFitP(ParmsZiegler2005P$par)
+SimZiegler2005P$errors
 #No. of observations
-nt = nrow(ZData[(!is.na(ZData$CO2cumul)), ]) +
-  nrow(ZData[(!is.na(ZData$S)), ]) + 
-  nrow(ZData[(!is.na(ZData$PLFA)), ])
+nt = SimZiegler2005M$errors[6]
 #DEB model
-DEBSSRes = 5.90867622 #Weighted residual sum of squares from python (all variables standardized to 0 mean and unit variance)
-DEBpar = 8
+DEBSSRes = SimZiegler2014$errors[5]
+DEBpar = SimZiegler2014$errors[7]
 #Monod model
-MSSRes = 15.37224822 #Weighted residual sum of squares from python (all variables standardized to 0 mean and unit variance)
-Mpar = 5
+MSSRes = SimZiegler2005M$errors[5]
+Mpar = SimZiegler2005M$errors[7]
 #Pirt model
-PSSRes = 10.28259583#Weighted residual sum of squares from python (all variables standardized to 0 mean and unit variance)
-Ppar = 6
+PSSRes = SimZiegler2005P$errors[5]#Weighted residual sum of squares from python (all variables standardized to 0 mean and unit variance)
+Ppar = SimZiegler2005P$errors[7]
 
 #DEB vs Monod
 ####F value =  (M1ss - M2ss)*(nt - M2p)/M2ss/(M2p - M1p)
@@ -944,6 +686,26 @@ pf(q=(PSSRes - DEBSSRes)*(nt - DEBpar)/DEBSSRes/(DEBpar - Ppar),
    df1=(DEBpar - Ppar), 
    df2=(nt - DEBpar), 
    lower.tail=F)
+
+##Visualizing the fit
+##Glucose
+ggplot(ZData, aes(Time, S)) + geom_point(cex=6, pch=21, fill = "grey") +
+  theme_min + ylab(expression(paste("Glucose (", mu, "mol(C) ", g^{-1}, ")"))) + xlab("Time (days)") +
+  geom_line(data = (SimZiegler2014$Simulation), aes(Time, S), lwd = 1.5) +
+  geom_line(data = (SimZiegler2005M$Simulation), aes(Time, S), lwd = 1.5, color = "grey") +
+  geom_line(data = (SimZiegler2005P$Simulation), aes(Time, S), lwd = 1.5, color = "grey30", lty = 2) 
+##Cumulative respiration
+ggplot(ZData, aes(Time, CO2cumul)) + geom_point(cex=6, pch=21, fill = "grey") +
+  theme_min + ylab(expression(paste("Cumulative respiration (", mu, "mol(C) ", g^{-1}, ")"))) + xlab("Time (days)") +
+  geom_line(data = (SimZiegler2014$Simulation), aes(Time, CO2), lwd = 1.5) +
+  geom_line(data = (SimZiegler2005M$Simulation), aes(Time, CO2), lwd = 1.5, color = "grey") +
+  geom_line(data = (SimZiegler2005P$Simulation), aes(Time, CO2), lwd = 1.5, color = "grey30", lty = 2) 
+##PLFA
+ggplot(ZData, aes(Time, PLFA)) + geom_point(cex=6, pch=21, fill = "grey") +
+  theme_min + ylab(expression(paste("PLFA (", mu, "mol(C) ", g^{-1}, ")"))) + xlab("Time (days)") +
+  geom_line(data = (SimZiegler2014$Simulation), aes(Time, PLFA), lwd = 1.5) +
+  geom_line(data = (SimZiegler2005M$Simulation), aes(Time, PLFA), lwd = 1.5, color = "grey") +
+  geom_line(data = (SimZiegler2005P$Simulation), aes(Time, PLFA), lwd = 1.5, color = "grey30", lty = 2) 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~Tsai et al. (1997)~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
@@ -960,99 +722,101 @@ ggplot(TData, aes(Time, CO2cumul)) + geom_point(cex=6, pch=21, fill = "grey") +
   facet_grid(.~Treatment)
 ##ATP
 ggplot(TData, aes(Time, ATP*1000)) + geom_point(cex=6, pch=21, fill = "grey") +
-  theme_min + ylab(expression(paste("ATP (nmol(C) ", g^{-1}, ")"))) + xlab("Time (days)") +
+  theme_min + ylab(expression(paste("ATP (nmol(ATP) ", g^{-1}, ")"))) + xlab("Time (days)") +
   facet_grid(.~Treatment)
 ##ATP to Cmic
-ggplot(TData, aes(Time, ATP*1000/Cmic)) + geom_point(cex=6, pch=21, fill = "grey") +
-  theme_min + ylab(expression(paste("ATP (nmol(C) ", g^{-1}, ")"))) + xlab("Time (days)") +
+ggplot(TData, aes(Time, ATP/Cmic)) + geom_point(cex=6, pch=21, fill = "grey") +
+  theme_min + ylab(expression(paste("ATP/Flush (mmol(ATP)/mol(C))"))) + xlab("Time (days)") +
   facet_grid(.~Treatment)
 
-#================================================================
-#Testing the volume-specific DEB model
-#================================================================
-##Parameters estimation
-TPred = read.csv("../PythonScripts/Tsai1997Pred.csv", header = F)
-colnames(TPred) <- c("CO2", "Cmic", "ATP") 
-TPred$Time = seq(0, 9, by = 0.05)
-TPred$Treatment <- c(rep("HG", times = length(seq(0, 9, by = 0.05))),
-                     rep("LG", times = length(seq(0, 9, by = 0.05))))
-
-##Compare to Monod model
-TPredM = read.csv("../PythonScripts/Tsai1997PredM.csv", header = F)
-colnames(TPredM) <- c("CO2", "Cmic", "ATP") 
-TPredM$Time = seq(0, 9, by = 0.05)
-TPredM$Treatment <- c(rep("HG", times = length(seq(0, 9, by = 0.05))),
-                     rep("LG", times = length(seq(0, 9, by = 0.05))))
-##Compare to Pirt model
-TPredP = read.csv("../PythonScripts/Tsai1997PredP.csv", header = F)
-colnames(TPredP) <- c("CO2", "Cmic", "ATP") 
-TPredP$Time = seq(0, 9, by = 0.05)
-TPredP$Treatment <- c(rep("HG", times = length(seq(0, 9, by = 0.05))),
-                      rep("LG", times = length(seq(0, 9, by = 0.05))))
-
-##Visualizing the fit
-##MBC
-ggplot(TData, aes(Time, Cmic)) + geom_point(cex=6, pch=21, fill = "grey") +
-  theme_min + ylab(expression(paste("Flush (", mu, "mol(C) ", g^{-1}, ")"))) + xlab("Time (days)") +
-  geom_line(data = TPred, aes(Time, Cmic), lwd = 1.5) +
-  geom_line(data = TPredM, aes(Time, Cmic), lwd = 1.5, colour = "grey") +
-  geom_line(data = TPredP, aes(Time, Cmic), lwd = 1.5, colour = "grey", lty = 2) +
-  facet_grid(.~Treatment)
-##Cumulative respiration
-ggplot(TData, aes(Time, CO2cumul)) + geom_point(cex=6, pch=21, fill = "grey") +
-  theme_min + ylab(expression(paste("Cumulative respiration (", mu, "mol(C) ", g^{-1}, ")"))) + xlab("Time (days)") +
-  geom_line(data = TPred, aes(Time, CO2), lwd = 1.5) +
-  geom_line(data = TPredM, aes(Time, CO2), lwd = 1.5, colour = "grey") +
-  geom_line(data = TPredP, aes(Time, CO2), lwd = 1.5, colour = "grey", lty = 2) +
-  facet_grid(.~Treatment)
-##ATP
-ggplot(TData, aes(Time, ATP*1000)) + geom_point(cex=6, pch=21, fill = "grey") +
-  theme_min + ylab(expression(paste("ATP (nmol(C) ", g^{-1}, ")"))) + xlab("Time (days)") +
-  geom_line(data = TPred, aes(Time, ATP*1000), lwd = 1.5) +
-  geom_line(data = TPredM, aes(Time, ATP*1000), lwd = 1.5, colour = "grey") +
-  geom_line(data = TPredP, aes(Time, ATP*1000), lwd = 1.5, colour = "grey", lty = 2) +
-  facet_grid(.~Treatment)
-
-##ATP to Cmic
-ggplot(TData, aes(Time, ATP*1000/Cmic)) + geom_point(cex=6, pch=21, fill = "grey") +
-  theme_min + ylab(expression(paste("ATP/MBC (mmol", mol^{-1},")"))) + xlab("Time (days)") +
-  geom_line(data = TPred, aes(Time, ATP*1000/Cmic), lwd = 1.5) +
-  geom_line(data = TPredM, aes(Time, ATP*1000/Cmic), lwd = 1.5, colour = "grey") +
-  geom_line(data = TPredP, aes(Time, ATP*1000/Cmic), lwd = 1.5, colour = "grey", lty = 2) +
-  facet_grid(.~Treatment)
-
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-#=====================
-# Study, Treatment, yA, Km, v, m, g, ce, nX1, 
-# iX1, ne, rX1, re, pX1, pe, lX1, le
-Tpars <- as.numeric(read.csv("../PythonScripts/Tsai1997Pars.csv", header = F))
+#Model calibration
+##Reading respective python scripts
+source_python("../PythonScripts/IndividualStudies/Tsai1997ODESolv.py") 
+source_python("../PythonScripts/IndividualStudies/DEBmodel.py") 
+##Reading objective function
+source("IndividualStudies/TObjective.R")
+##Optimization
+##First guess by MCMC 
+TP <- modMCMC(TObjective, p = c(Parms[,1], 1e-4, 1e-4), 
+              lower = c(Parms[, 2], 0, 0),
+              upper = c(Parms[, 3], 0.1, 0.1), niter = 30000)
+summary(TP)
+##Estimate
+ParmsTsai1997 <- abc_optim(fn = TObjective, 
+                              par = as.numeric(summary(TP)[c("mean"), ]), 
+                              lb = as.numeric(summary(TP)[c("min"), ]), 
+                              ub = as.numeric(summary(TP)[c("max"), ])) 
+ParmsTsai1997$par
+#==================================================#
+#Goodness of fit and simulations
+source("IndividualStudies/TFit.R")
+SimTsai1997 <- TFit(as.numeric(summary(TP)[c("mean"), ]))
+SimTsai1997$errors
+#=====================Save parameters
 parsAll <- rbind(parsAll, data.frame(Study = c("Tsai et al. (1997)"),
                                      Treatment = c("Glucose"),
-                                     yA = Tpars[1],  Km = Tpars[2], v = Tpars[3],
-                                     m = Tpars[4],  g = Tpars[5], ce = Tpars[6],  nX1 = Tpars[7],
-                                     iX1 = c(NA), tX1 = c(Tpars[8]), te = c(Tpars[9]), rX1 = c(NA),
-                                     re = c(NA),  pX1 = c(NA), pe = c(NA),
-                                     lX1 = c(NA), le = c(NA)))
-
+                                     Im = ParmsTsai1997$par[1], Km = ParmsTsai1997$par[2], 
+                                     yA = ParmsTsai1997$par[3],
+                                     Em = ParmsTsai1997$par[4], m = ParmsTsai1997$par[5], 
+                                     g = ParmsTsai1997$par[6], 
+                                     ne = ParmsTsai1997$par[7], nX1 = ParmsTsai1997$par[8], 
+                                     iX1 = NA, te = ParmsTsai1997$par[9], 
+                                     tX1 = ParmsTsai1997$par[10], re = NA, rX1 = NA, 
+                                     pe = NA, pX1 = NA, 
+                                     le = NA, lX1 = NA))
 #=====================
 
 #=================================
 # Models comparison - F statistic
 #=================================
+##Monod model
+source_python("../PythonScripts/IndividualStudies/Tsai1997ODESolvM.py")
+source_python("../PythonScripts/IndividualStudies/Monod.py")
+source("./IndividualStudies/TObjectiveM.R")
+##Optimization
+##First guess by MCMC 
+TPM <- modMCMC(TObjectiveM, p = c(1, 25, 0.5, 1e-3, 0.4, 0.01), 
+               lower = c(1e-3, 0.1, 0.05, 1e-8, 0, 0),
+               upper = c(100, 3000, 1, 1, 1, 1), niter = 30000)
+##Estimate
+ParmsTsai1997M <- abc_optim(fn = TObjectiveM, par = as.numeric(summary(TPM)["mean", ]), 
+                               lb = as.numeric(summary(TPM)["min", ]), 
+                               ub = as.numeric(summary(TPM)["max", ])) 
+ParmsTsai1997M$par
+#Goodness of fit and simulations
+source("IndividualStudies/TFitM.R")
+SimTsai1997M <- TFitM(ParmsTsai1997M$par)
+SimTsai1997M$errors
+
+##Pirt model
+source_python("../PythonScripts/IndividualStudies/Tsai1997ODESolvP.py")
+source_python("../PythonScripts/IndividualStudies/Pirt.py")
+source("./IndividualStudies/TObjectiveP.R")
+##Optimization
+##First guess by MCMC 
+TPP <- modMCMC(TObjectiveP, p = c(1, 25, 0.5, 1e-3, 1e-3, 0.3, 0.01), 
+               lower = c(1e-3, 0.1, 0.05, 1e-8, 1e-8, 0, 0),
+               upper = c(100, 3000, 1, 1, 1, 1, 1), niter = 30000)
+##Estimate
+ParmsTsai1997P <- abc_optim(fn = TObjectiveP, par = as.numeric(summary(TPP)["mean", ]), 
+                               lb = as.numeric(summary(TPP)["min", ]), 
+                               ub = as.numeric(summary(TPP)["max", ])) 
+ParmsTsai1997P$par
+#Goodness of fit and simulations
+source("IndividualStudies/TFitP.R")
+SimTsai1997P <- TFitP(ParmsTsai1997P$par)
+SimTsai1997P$errors
 #No. of observations
-nt = nrow(TData[(!is.na(TData$CO212cumul)), ]) +
-  nrow(TData[(!is.na(TData$ATP)), ]) + 
-  nrow(TData[(!is.na(TData$Cmic)), ])
+nt = SimTsai1997P$errors[6]
 #DEB model
-DEBSSRes = 12.934425538230702 #Weighted residual sum of squares from python (all variables standardized to 0 mean and unit variance)
-DEBpar = 8
+DEBSSRes = SimTsai1997$errors[5]
+DEBpar = SimTsai1997$errors[7]
 #Monod model
-MSSRes = 14.008509347822782 #Weighted residual sum of squares from python (all variables standardized to 0 mean and unit variance)
-Mpar = 6
+MSSRes = SimTsai1997M$errors[5]
+Mpar = SimTsai1997M$errors[7]
 #Pirt model
-PSSRes = 13.8187411195515823#Weighted residual sum of squares from python (all variables standardized to 0 mean and unit variance)
-Ppar = 7
+PSSRes = SimTsai1997P$errors[5]#Weighted residual sum of squares from python (all variables standardized to 0 mean and unit variance)
+Ppar = SimTsai1997P$errors[7]
 
 #DEB vs Monod
 ####F value =  (M1ss - M2ss)*(nt - M2p)/M2ss/(M2p - M1p)
@@ -1066,13 +830,44 @@ pf(q=(MSSRes - DEBSSRes)*(nt - DEBpar)/DEBSSRes/(DEBpar - Mpar),
 
 #DEB vs Pirt
 ####F value =  (M1ss - M2ss)*(nt - M2p)/M2ss/(M2p - M1p)
-(MSSRes - DEBSSRes)*(nt - DEBpar)/DEBSSRes/(DEBpar - Mpar)
+(PSSRes - DEBSSRes)*(nt - DEBpar)/DEBSSRes/(DEBpar - Ppar)
 
 ####associated p value
 pf(q=(PSSRes - DEBSSRes)*(nt - DEBpar)/DEBSSRes/(DEBpar - Ppar), 
    df1=(DEBpar - Ppar), 
    df2=(nt - DEBpar), 
    lower.tail=F)
+
+##Visualizing the fit
+##MBC
+ggplot(TData, aes(Time, Cmic)) + geom_point(cex=6, pch=21, fill = "grey") +
+  theme_min + ylab(expression(paste("Flush (", mu, "mol(C) ", g^{-1}, ")"))) + xlab("Time (days)") +
+  geom_line(data = (SimTsai1997$Simulation), aes(Time, Flush), lwd = 1.5) +
+  geom_line(data = (SimTsai1997M$Simulation), aes(Time, Flush), lwd = 1.5, color = "grey") +
+  geom_line(data = (SimTsai1997P$Simulation), aes(Time, Flush), lwd = 1.5, color = "grey30", lty = 2) +
+  facet_grid(.~Treatment)
+##Cumulative respiration
+ggplot(TData, aes(Time, CO2cumul)) + geom_point(cex=6, pch=21, fill = "grey") +
+  theme_min + ylab(expression(paste("Cumulative respiration (", mu, "mol(C) ", g^{-1}, ")"))) + xlab("Time (days)") +
+  geom_line(data = (SimTsai1997$Simulation), aes(Time, CO2), lwd = 1.5) +
+  geom_line(data = (SimTsai1997M$Simulation), aes(Time, CO2), lwd = 1.5, color = "grey") +
+  geom_line(data = (SimTsai1997P$Simulation), aes(Time, CO2), lwd = 1.5, color = "grey30", lty = 2) +
+  facet_grid(.~Treatment)
+##ATP
+ggplot(TData, aes(Time, ATP*1000)) + geom_point(cex=6, pch=21, fill = "grey") +
+  theme_min + ylab(expression(paste("ATP (nmol(ATP) ", g^{-1}, ")"))) + xlab("Time (days)") +
+  geom_line(data = (SimTsai1997$Simulation), aes(Time, ATP*1000), lwd = 1.5) +
+  geom_line(data = (SimTsai1997M$Simulation), aes(Time, ATP*1000), lwd = 1.5, color = "grey") +
+  geom_line(data = (SimTsai1997P$Simulation), aes(Time, ATP*1000), lwd = 1.5, color = "grey30", lty = 2) +
+  facet_grid(.~Treatment)
+
+##ATP to Cmic
+ggplot(TData, aes(Time, ATP*1000/Cmic)) + geom_point(cex=6, pch=21, fill = "grey") +
+  theme_min + ylab(expression(paste(frac(ATP, CHCl[3]~flush),"    (", frac(mmol, mol),")"))) + xlab("Time (days)") +
+  geom_line(data = (SimTsai1997$Simulation), aes(Time, ATP*1000/Flush), lwd = 1.5) +
+  #geom_line(data = (SimTsai1997M$Simulation), aes(Time, ATP*1000/Flush), lwd = 1.5, color = "grey") +
+  #geom_line(data = (SimTsai1997P$Simulation), aes(Time, ATP*1000/Flush), lwd = 1.5, color = "grey30", lty = 2) +
+  facet_grid(.~Treatment)
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~Joergensen and Raubuch (2002)~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
@@ -1088,101 +883,100 @@ ggplot(JData, aes(Time, Cmic)) + geom_point(cex=6, pch=21, fill = "grey") +
   theme_min + ylab(expression(paste("Flush (", mu, "mol(C) ", g^{-1}, ")"))) + xlab("Time (days)") 
 ##ATP
 ggplot(JData, aes(Time, ATP*1000)) + geom_point(cex=6, pch=21, fill = "grey") +
-  theme_min + ylab(expression(paste("ATP (nmol(C) ", g^{-1}, ")"))) + xlab("Time (days)") 
+  theme_min + ylab(expression(paste("ATP (nmol(ATP) ", g^{-1}, ")"))) + xlab("Time (days)") 
 
 ##ATP to Cmic
 ggplot(JData, aes(Time, ATP*1000/Cmic)) + geom_point(cex=6, pch=21, fill = "grey") +
-  theme_min + ylab(expression(paste("ATP (nmol(C) ", g^{-1}, ")"))) + xlab("Time (days)") 
+  theme_min + ylab(expression(paste("ATP/Flush (mmol(ATP)/mol(C))"))) + xlab("Time (days)") 
 
-#================================================================
-#Testing the volume-specific DEB model
-#================================================================
-##Parameters estimation
-JPred = read.csv("../PythonScripts/Joergensen2002Pred.csv", header = F)
-colnames(JPred) <- c("S", "e", "X1", "B", "Cmic", "ATP") 
-JPred$Time = seq(0, 8, by = 0.05)
-
-##Compare to Monod model
-JPredM = read.csv("../PythonScripts/Joergensen2002PredM.csv", header = F)
-colnames(JPredM) <- c("S", "Cmic", "ATP") 
-JPredM$Time = seq(0, 8, by = 0.05)
-
-##Compare to Pirt model
-JPredP = read.csv("../PythonScripts/Joergensen2002PredP.csv", header = F)
-colnames(JPredP) <- c("S", "Cmic", "ATP") 
-JPredP$Time = seq(0, 8, by = 0.05)
-
-
-##Visualizing the fit
-##Glucose
-ggplot(JData, aes(Time, S)) + geom_point(cex=6, pch=21, fill = "grey") +
-  theme_min + ylab(expression(paste("Glucose (", mu, "mol(C) ", g^{-1}, ")"))) + xlab("Time (days)") +
-  geom_line(data = JPred, aes(Time, S), lwd = 1.5) +
-  geom_line(data = JPredM, aes(Time, S), lwd = 1.5, colour = "grey") +
-  geom_line(data = JPredP, aes(Time, S), lwd = 1.5, colour = "grey", lty = 2) 
-##MBC
-ggplot(JData, aes(Time, Cmic)) + geom_point(cex=6, pch=21, fill = "grey") +
-  theme_min + ylab(expression(paste("Flush (", mu, "mol(C) ", g^{-1}, ")"))) + xlab("Time (days)") +
-  geom_line(data = JPred, aes(Time, Cmic), lwd = 1.5) +
-  geom_line(data = JPredM, aes(Time, Cmic), lwd = 1.5, colour = "grey") +
-  geom_line(data = JPredP, aes(Time, Cmic), lwd = 1.5, colour = "grey", lty = 2) 
-##ATP
-ggplot(JData, aes(Time, ATP*1000)) + geom_point(cex=6, pch=21, fill = "grey") +
-  theme_min + ylab(expression(paste("ATP (", mu, "mol(C) ", g^{-1}, ")"))) + xlab("Time (days)") +
-  geom_line(data = JPred, aes(Time, ATP*1000), lwd = 1.5) +
-  geom_line(data = JPredM, aes(Time, ATP*1000), lwd = 1.5, colour = "grey") +
-  geom_line(data = JPredP, aes(Time, ATP*1000), lwd = 1.5, colour = "grey", lty = 2) 
-
-##ATP to Cmic
-ggplot(JData, aes(Time, ATP*1000/Cmic)) + geom_point(cex=6, pch=21, fill = "grey") +
-  theme_min + ylab(expression(paste("ATP (nmol(C) ", g^{-1}, ")"))) + xlab("Time (days)") +
-  geom_line(data = JPred, aes(Time, ATP*1000/Cmic), lwd = 1.5) +
-  geom_line(data = JPredM, aes(Time, ATP*1000/Cmic), lwd = 1.5, colour = "grey") +
-  geom_line(data = JPredP, aes(Time, ATP*1000/Cmic), lwd = 1.5, colour = "grey", lty = 2) 
-
-##e
-ggplot(JPred, aes(Time, e)) + geom_line() +
-  theme_min + ylab(expression(paste("e (unitless)"))) + xlab("Time (days)") 
-
-JData$e <- with(JData, 0.25*((ATP/Cmic)*2.78558533e-01 - 1.92778569e-03)/(1.44641993e-04 - (ATP/Cmic)))
-
-ggplot(JData, aes(Time, e)) + geom_point(cex=6, pch=21, fill = "grey") +
-  theme_min + ylab(expression(paste("e (unitless)"))) + xlab("Time (days)")
-ggplot(JData, aes(e, Cmic/Nmic)) + geom_point(cex=6, pch=21, fill = "grey") +
-  theme_min + xlab(expression(paste("e (unitless)"))) + ylab("MBC/MBN (mol/mol)")
-
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-#=====================
-# Study, Treatment, yA, Km, v, m, g, ce, nX1, 
-# iX1, ne, rX1, re, pX1, pe, lX1, le
-Jpars <- as.numeric(read.csv("../PythonScripts/Joergensen2002Pars.csv", header = F))
+#Model calibration
+##Reading respective python scripts
+source_python("../PythonScripts/IndividualStudies/Joerg2002ODESolv.py") 
+source_python("../PythonScripts/IndividualStudies/DEBmodel.py") 
+##Reading objective function
+source("IndividualStudies/JObjective.R")
+##Optimization
+##First guess by MCMC 
+JP <- modMCMC(JObjective, p = c(Parms[,1], 1e-4, 1e-4), 
+              lower = c(Parms[, 2], 0, 0),
+              upper = c(Parms[, 3], 0.1, 0.1), niter = 30000)
+summary(JP)
+##Estimate
+ParmsJoerg2002 <- abc_optim(fn = JObjective, 
+                           par = as.numeric(summary(JP)[c("mean"), ]), 
+                           lb = as.numeric(summary(JP)[c("min"), ]), 
+                           ub = as.numeric(summary(JP)[c("max"), ])) 
+ParmsJoerg2002$par
+#==================================================#
+#Goodness of fit and simulations
+source("IndividualStudies/JFit.R")
+SimJoerg2002 <- JFit(ParmsJoerg2002$par)
+SimJoerg2002$errors
+#=====================Save parameters
 parsAll <- rbind(parsAll, data.frame(Study = c("Joergensen and Raubuch (2002)"),
                                      Treatment = c("Glucose"),
-                                     yA = Jpars[1],  Km = Jpars[2], v = Jpars[3],
-                                     m = Jpars[4],  g = Jpars[5], ce = Jpars[6],  nX1 = Jpars[7],
-                                     iX1 = c(NA),  tX1 = c(Jpars[8]), te = c(Jpars[9]), rX1 = c(NA),
-                                     re = c(NA),  pX1 = c(NA), pe = c(NA),
-                                     lX1 = c(NA), le = c(NA)))
-
+                                     Im = ParmsJoerg2002$par[1], Km = ParmsJoerg2002$par[2], 
+                                     yA = ParmsJoerg2002$par[3],
+                                     Em = ParmsJoerg2002$par[4], m = ParmsJoerg2002$par[5], 
+                                     g = ParmsJoerg2002$par[6], 
+                                     ne = ParmsJoerg2002$par[7], nX1 = ParmsJoerg2002$par[8], 
+                                     iX1 = NA, te = ParmsJoerg2002$par[9], 
+                                     tX1 = ParmsJoerg2002$par[10], re = NA, rX1 = NA, 
+                                     pe = NA, pX1 = NA, 
+                                     le = NA, lX1 = NA))
 #=====================
 
 #=================================
 # Models comparison - F statistic
 #=================================
+##Monod model
+source_python("../PythonScripts/IndividualStudies/Joerg2002ODESolvM.py")
+source_python("../PythonScripts/IndividualStudies/Monod.py")
+source("./IndividualStudies/JObjectiveM.R")
+##Optimization
+##First guess by MCMC 
+JPM <- modMCMC(JObjectiveM, p = c(1, 25, 0.5, 1e-3, 0.4, 0.01), 
+               lower = c(1e-3, 0.1, 0.05, 1e-8, 0, 0),
+               upper = c(100, 3000, 1, 1, 1, 1), niter = 30000)
+##Estimate
+ParmsJoerg2002M <- abc_optim(fn = JObjectiveM, par = as.numeric(summary(JPM)["mean", ]), 
+                            lb = as.numeric(summary(JPM)["min", ]), 
+                            ub = as.numeric(summary(JPM)["max", ])) 
+ParmsJoerg2002M$par
+#Goodness of fit and simulations
+source("IndividualStudies/JFitM.R")
+SimJoerg2002M <- JFitM(ParmsJoerg2002M$par)
+SimJoerg2002M$errors
+
+##Pirt model
+source_python("../PythonScripts/IndividualStudies/Joerg2002ODESolvP.py")
+source_python("../PythonScripts/IndividualStudies/Pirt.py")
+source("./IndividualStudies/JObjectiveP.R")
+##Optimization
+##First guess by MCMC 
+JPP <- modMCMC(JObjectiveP, p = c(1, 25, 0.5, 1e-3, 1e-3, 0.3, 0.01), 
+               lower = c(1e-3, 0.1, 0.05, 1e-8, 1e-8, 0, 0),
+               upper = c(100, 3000, 1, 1, 1, 1, 1), niter = 30000)
+##Estimate
+ParmsJoerg2002P <- abc_optim(fn = JObjectiveP, par = as.numeric(summary(JPP)["mean", ]), 
+                            lb = as.numeric(summary(JPP)["min", ]), 
+                            ub = as.numeric(summary(JPP)["max", ])) 
+ParmsJoerg2002P$par
+#Goodness of fit and simulations
+source("IndividualStudies/JFitP.R")
+SimJoerg2002P <- JFitP(ParmsJoerg2002P$par)
+SimJoerg2002P$errors
 #No. of observations
-nt = nrow(JData[(!is.na(JData$S)), ]) +
-  nrow(JData[(!is.na(JData$ATP)), ]) + 
-  nrow(JData[(!is.na(JData$Cmic)), ])
+nt = SimJoerg2002P$errors[6]
 #DEB model
-DEBSSRes = 2.76882041 #Weighted residual sum of squares from python (all variables standardized to 0 mean and unit variance)
-DEBpar = 9
+DEBSSRes = SimJoerg2002$errors[5]
+DEBpar = SimJoerg2002$errors[7]
 #Monod model
-MSSRes = 4.93653848 #Weighted residual sum of squares from python (all variables standardized to 0 mean and unit variance)
-Mpar = 6
+MSSRes = SimJoerg2002M$errors[5]
+Mpar = SimJoerg2002M$errors[7]
 #Pirt model
-PSSRes = 4.89165775#Weighted residual sum of squares from python (all variables standardized to 0 mean and unit variance)
-Ppar = 7
+PSSRes = SimJoerg2002P$errors[5]#Weighted residual sum of squares from python (all variables standardized to 0 mean and unit variance)
+Ppar = SimJoerg2002P$errors[7]
 
 #DEB vs Monod
 ####F value =  (M1ss - M2ss)*(nt - M2p)/M2ss/(M2p - M1p)
@@ -1203,6 +997,33 @@ pf(q=(PSSRes - DEBSSRes)*(nt - DEBpar)/DEBSSRes/(DEBpar - Ppar),
    df1=(DEBpar - Ppar), 
    df2=(nt - DEBpar), 
    lower.tail=F)
+
+##Visualizing the fit
+##Glucose
+ggplot(JData, aes(Time, S)) + geom_point(cex=6, pch=21, fill = "grey") +
+  theme_min + ylab(expression(paste("Glucose (", mu, "mol(C) ", g^{-1}, ")"))) + xlab("Time (days)") +
+  geom_line(data = (SimJoerg2002$Simulation), aes(Time, S), lwd = 1.5) +
+  geom_line(data = (SimJoerg2002M$Simulation), aes(Time, S), lwd = 1.5, color = "grey") +
+  geom_line(data = (SimJoerg2002P$Simulation), aes(Time, S), lwd = 1.5, color = "grey30", lty = 2)
+##MBC
+ggplot(JData, aes(Time, Cmic)) + geom_point(cex=6, pch=21, fill = "grey") +
+  theme_min + ylab(expression(paste("Flush (", mu, "mol(C) ", g^{-1}, ")"))) + xlab("Time (days)") +
+  geom_line(data = (SimJoerg2002$Simulation), aes(Time, Flush), lwd = 1.5) +
+  geom_line(data = (SimJoerg2002M$Simulation), aes(Time, Flush), lwd = 1.5, color = "grey") +
+  geom_line(data = (SimJoerg2002P$Simulation), aes(Time, Flush), lwd = 1.5, color = "grey30", lty = 2)
+##ATP
+ggplot(JData, aes(Time, ATP*1000)) + geom_point(cex=6, pch=21, fill = "grey") +
+  theme_min + ylab(expression(paste("ATP (nmol(ATP) ", g^{-1}, ")"))) + xlab("Time (days)") +
+  geom_line(data = (SimJoerg2002$Simulation), aes(Time, ATP*1000), lwd = 1.5) +
+  geom_line(data = (SimJoerg2002M$Simulation), aes(Time, ATP*1000), lwd = 1.5, color = "grey") +
+  geom_line(data = (SimJoerg2002P$Simulation), aes(Time, ATP*1000), lwd = 1.5, color = "grey30", lty = 2)
+
+##ATP to Cmic
+ggplot(JData, aes(Time, ATP*1000/Cmic)) + geom_point(cex=6, pch=21, fill = "grey") +
+  theme_min + ylab(expression(paste(frac(ATP, CHCl[3]~flush), "   (", frac(mmol, mol), ")"))) + xlab("Time (days)") +
+  geom_line(data = (SimJoerg2002$Simulation), aes(Time, ATP*1000/Flush), lwd = 1.2) #+
+  geom_line(data = (SimJoerg2002M$Simulation), aes(Time, ATP*1000/Flush), lwd = 1.5, color = "grey") +
+  geom_line(data = (SimJoerg2002P$Simulation), aes(Time, ATP*1000/Flush), lwd = 1.5, color = "grey30", lty = 2)
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~Nannipieri et al. (1977)~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
@@ -1218,88 +1039,96 @@ ggplot(NData, aes(Time, W/1000)) + geom_point(cex=6, pch=21, fill = "grey") + fa
   theme_min + ylab(expression(paste("Biomass (", "mg ", g^{-1}, ")"))) + xlab("Time (days)") 
 ##ATP
 ggplot(NData, aes(Time, ATP*1000)) + geom_point(cex=6, pch=21, fill = "grey") + facet_grid(.~Treatment) +
-  theme_min + ylab(expression(paste("ATP (nmol(C) ", g^{-1}, ")"))) + xlab("Time (days)") 
+  theme_min + ylab(expression(paste("ATP (nmol(ATP) ", g^{-1}, ")"))) + xlab("Time (days)") 
 
-#================================================================
-#Testing the volume-specific DEB model
-#================================================================
-##Parameters estimation
-NPred = read.csv("../PythonScripts/Nannipieri1977Pred.csv", header = F)
-colnames(NPred) <- c("S", "e", "X1", "W", "B", "CO2", "ATP") 
-NPred$Time = rep(seq(0, 3.55, by = 0.05), 3)
-NPred$Treatment = c(rep("A", times = length(seq(0, 3.55, by = 0.05))),
-                    rep("B", times = length(seq(0, 3.55, by = 0.05))),
-                    rep("C", times = length(seq(0, 3.55, by = 0.05))))
-
-##Compare to Monod model
-NPredM = read.csv("../PythonScripts/Nannipieri1977PredM.csv", header = F)
-colnames(NPredM) <- c("CO2", "W", "ATP") 
-NPredM$Time = rep(seq(0, 3.55, by = 0.05), 3)
-NPredM$Treatment = c(rep("A", times = length(seq(0, 3.55, by = 0.05))),
-                    rep("B", times = length(seq(0, 3.55, by = 0.05))),
-                    rep("C", times = length(seq(0, 3.55, by = 0.05))))
-
-##Compare to Pirt model
-NPredP = read.csv("../PythonScripts/Nannipieri1977PredP.csv", header = F)
-colnames(NPredP) <- c("CO2", "W", "ATP") 
-NPredP$Time = rep(seq(0, 3.55, by = 0.05), 3)
-NPredP$Treatment = c(rep("A", times = length(seq(0, 3.55, by = 0.05))),
-                     rep("B", times = length(seq(0, 3.55, by = 0.05))),
-                     rep("C", times = length(seq(0, 3.55, by = 0.05))))
-
-##Visualizing the fit
-##CO2
-ggplot(NData, aes(Time, CO2)) + geom_point(cex=6, pch=21, fill = "grey") + facet_grid(.~Treatment) +
-  theme_min + ylab(expression(paste("Cumulative respiration (", mu, "mol(C) ", g^{-1}, ")"))) + xlab("Time (days)") +
-  geom_line(data = NPred, aes(Time, CO2), lwd = 1.5) +
-  geom_line(data = NPredM, aes(Time, CO2), lwd = 1.5, colour = "grey") +
-  geom_line(data = NPredP, aes(Time, CO2), lwd = 1.5, colour = "grey", lty = 2) 
-##Biomass
-ggplot(NData, aes(Time, W/1000)) + geom_point(cex=6, pch=21, fill = "grey") + facet_grid(.~Treatment) +
-  theme_min + ylab(expression(paste("Biomass (mg ", g^{-1}, ")"))) + xlab("Time (days)") +
-  geom_line(data = NPred, aes(Time, W/1000), lwd = 1.5) +
-  geom_line(data = NPredM, aes(Time, W/1000), lwd = 1.5, colour = "grey") +
-  geom_line(data = NPredP, aes(Time, W/1000), lwd = 1.5, colour = "grey", lty = 2) 
-##ATP
-ggplot(NData, aes(Time, ATP*1000)) + geom_point(cex=6, pch=21, fill = "grey") + facet_grid(.~Treatment) +
-  theme_min + ylab(expression(paste("Flush (", mu, "mol(C) ", g^{-1}, ")"))) + xlab("Time (days)") +
-  geom_line(data = NPred, aes(Time, ATP*1000), lwd = 1.5) +
-  geom_line(data = NPredM, aes(Time, ATP*1000), lwd = 1.5, colour = "grey") +
-  geom_line(data = NPredP, aes(Time, ATP*1000), lwd = 1.5, colour = "grey", lty = 2) 
-
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-#=====================
-# Study, Treatment, yA, Km, v, m, g, ce, nX1, 
-# iX1, ne, rX1, re, pX1, pe, lX1, le
-Npars <- as.data.frame(read.csv("../PythonScripts/Nannipieri1977Pars.csv", header = F))
-parsAll <- rbind(parsAll, data.frame(Study = rep(c("Nannipieri et al. (1977)"), 3),
+#Model calibration
+##Reading respective python scripts
+source_python("../PythonScripts/IndividualStudies/Nanni1977ODESolv.py") 
+source_python("../PythonScripts/IndividualStudies/DEBmodel.py") 
+##Reading objective function
+source("IndividualStudies/NObjective.R")
+##Optimization
+##First guess by MCMC 
+NP <- modMCMC(NObjective, p = c(Parms[1:6,1], 100, 100, 1e-4, 1e-4), 
+              lower = c(Parms[1:6, 2], 1, 1, 0, 0),
+              upper = c(Parms[1:6, 3], 1000, 1000, 1, 1), niter = 100000)
+summary(NP)
+##Estimate
+ParmsNanni1977 <- abc_optim(fn = NObjective, 
+                            par = as.numeric(summary(NP)[c("mean"), ]), 
+                            lb = as.numeric(summary(NP)[c("min"), ]), 
+                            ub = as.numeric(summary(NP)[c("max"), ])) 
+ParmsNanni1977$par
+#==================================================#
+#Goodness of fit and simulations
+source("IndividualStudies/NFit.R")
+SimNanni1977 <- NFit(ParmsNanni1977$par)
+SimNanni1977$errors
+#=====================Save parameters
+parsAll <- rbind(parsAll, data.frame(Study = c("Nannipieri et al. (1977)"),
                                      Treatment = c("Glucose"),
-                                     yA = as.numeric(Npars[, 1]),  Km = as.numeric(Npars[, 2]), v = as.numeric(Npars[, 3]),
-                                     m = as.numeric(Npars[, 4]),  g = as.numeric(Npars[, 5]), ce = as.numeric(Npars[, 6]),  nX1 = c(NA, NA, NA),
-                                     iX1 = c(NA, NA, NA),  tX1 = as.numeric(Npars[, 7]), te = as.numeric(Npars[, 8]), rX1 = c(NA, NA, NA),
-                                     re = c(NA, NA, NA),  pX1 = c(NA, NA, NA), pe = c(NA, NA, NA),
-                                     lX1 = c(NA, NA, NA), le = c(NA, NA, NA)))
-
+                                     Im = ParmsNanni1977$par[1], Km = ParmsNanni1977$par[2], 
+                                     yA = ParmsNanni1977$par[3],
+                                     Em = ParmsNanni1977$par[4], m = ParmsNanni1977$par[5], 
+                                     g = ParmsNanni1977$par[6], 
+                                     ne = NA, nX1 = NA, 
+                                     iX1 = NA, te = ParmsNanni1977$par[9], 
+                                     tX1 = ParmsNanni1977$par[10], re = NA, rX1 = NA, 
+                                     pe = NA, pX1 = NA, 
+                                     le = NA, lX1 = NA))
 #=====================
 
 #=================================
 # Models comparison - F statistic
 #=================================
-#Treatment A
+##Monod model
+source_python("../PythonScripts/IndividualStudies/Nanni1977ODESolvM.py")
+source_python("../PythonScripts/IndividualStudies/Monod.py")
+source("./IndividualStudies/NObjectiveM.R")
+##Optimization
+##First guess by MCMC 
+NPM <- modMCMC(NObjectiveM, p = c(1, 25, 0.5, 1e-3, 10, 0.01), 
+               lower = c(1e-3, 0.1, 0.05, 1e-8, 1, 0),
+               upper = c(100, 3000, 1, 1, 500, 1), niter = 30000)
+##Estimate
+ParmsNanni1977M <- abc_optim(fn = NObjectiveM, par = as.numeric(summary(NPM)["mean", ]), 
+                             lb = as.numeric(summary(NPM)["min", ]), 
+                             ub = as.numeric(summary(NPM)["max", ])) 
+ParmsNanni1977M$par
+#Goodness of fit and simulations
+source("IndividualStudies/NFitM.R")
+SimNanni1977M <- NFitM(ParmsNanni1977M$par)
+SimNanni1977M$errors
+
+##Pirt model
+source_python("../PythonScripts/IndividualStudies/Nanni1977ODESolvP.py")
+source_python("../PythonScripts/IndividualStudies/Pirt.py")
+source("./IndividualStudies/NObjectiveP.R")
+##Optimization
+##First guess by MCMC 
+NPP <- modMCMC(NObjectiveP, p = c(1, 25, 0.5, 1e-3, 1e-3, 10, 0.01), 
+               lower = c(1e-3, 0.1, 0.05, 1e-8, 1e-8, 1, 0),
+               upper = c(100, 3000, 1, 1, 1, 1000, 1), niter = 30000)
+##Estimate
+ParmsNanni1977P <- abc_optim(fn = NObjectiveP, par = as.numeric(summary(NPP)["mean", ]), 
+                             lb = as.numeric(summary(NPP)["min", ]), 
+                             ub = as.numeric(summary(NPP)["max", ])) 
+ParmsNanni1977P$par
+#Goodness of fit and simulations
+source("IndividualStudies/NFitP.R")
+SimNanni1977P <- NFitP(ParmsNanni1977P$par)
+SimNanni1977P$errors
 #No. of observations
-nt = nrow(NData[(!is.na(NData$CO2 & NData$Treatment == "A")), ]) +
-  nrow(NData[(!is.na(NData$ATP & NData$Treatment == "A")), ]) + 
-  nrow(NData[(!is.na(NData$W & NData$Treatment == "A")), ])
+nt = SimNanni1977P$errors[6]
 #DEB model
-DEBSSRes = 3.81255072 #Weighted residual sum of squares from python (all variables standardized to 0 mean and unit variance)
-DEBpar = 10
+DEBSSRes = SimNanni1977$errors[5]
+DEBpar = SimNanni1977$errors[7]
 #Monod model
-MSSRes = 2.48640062 #Weighted residual sum of squares from python (all variables standardized to 0 mean and unit variance)
-Mpar = 6
+MSSRes = SimNanni1977M$errors[5]
+Mpar = SimNanni1977M$errors[7]
 #Pirt model
-PSSRes = 10.41853908#Weighted residual sum of squares from python (all variables standardized to 0 mean and unit variance)
-Ppar = 7
+PSSRes = SimNanni1977P$errors[5]#Weighted residual sum of squares from python (all variables standardized to 0 mean and unit variance)
+Ppar = SimNanni1977P$errors[7]
 
 #DEB vs Monod
 ####F value =  (M1ss - M2ss)*(nt - M2p)/M2ss/(M2p - M1p)
@@ -1321,16 +1150,135 @@ pf(q=(PSSRes - DEBSSRes)*(nt - DEBpar)/DEBSSRes/(DEBpar - Ppar),
    df2=(nt - DEBpar), 
    lower.tail=F)
 
-#Treatment B
+##Visualizing the fit
+##CO2
+ggplot(NData, aes(Time, CO2)) + geom_point(cex=6, pch=21, fill = "grey") + facet_grid(.~Treatment) +
+  theme_min + ylab(expression(paste("Cumulative respiration (", mu, "mol(C) ", g^{-1}, ")"))) + xlab("Time (days)") +
+  geom_line(data = (SimNanni1977$Simulation), aes(Time, CO2), lwd = 1.5) +
+  geom_line(data = (SimNanni1977M$Simulation), aes(Time, CO2), lwd = 1.5, color = "grey") +
+  geom_line(data = (SimNanni1977P$Simulation), aes(Time, CO2), lwd = 1.5, color = "grey30", lty = 2)
+##Biomass
+ggplot(NData, aes(Time, W/1000)) + geom_point(cex=6, pch=21, fill = "grey") + facet_grid(.~Treatment) +
+  theme_min + ylab(expression(paste("Biomass (mg ", g^{-1}, ")"))) + xlab("Time (days)") +
+  geom_line(data = (SimNanni1977$Simulation), aes(Time, W/1000), lwd = 1.5) +
+  geom_line(data = (SimNanni1977M$Simulation), aes(Time, W/1000), lwd = 1.5, color = "grey") +
+  geom_line(data = (SimNanni1977P$Simulation), aes(Time, W/1000), lwd = 1.5, color = "grey30", lty = 2)
+##ATP
+ggplot(NData, aes(Time, ATP)) + geom_point(cex=6, pch=21, fill = "grey") + facet_grid(.~Treatment) +
+  theme_min + ylab(expression(paste("ATP (", mu, "mol(ATP) ", g^{-1}, ")"))) + xlab("Time (days)") +
+  geom_line(data = (SimNanni1977$Simulation), aes(Time, ATP), lwd = 1.5) +
+  geom_line(data = (SimNanni1977M$Simulation), aes(Time, ATP), lwd = 1.5, color = "grey") +
+  geom_line(data = (SimNanni1977P$Simulation), aes(Time, ATP), lwd = 1.5, color = "grey30", lty = 2)
+##ATP/W
+ggplot(NData[NData$Treatment=="A", ], aes(Time, ATP/W*1000)) + geom_point(cex=6, pch=21, fill = "grey") + 
+  theme_min + ylab(expression(paste(frac(ATP, W), "   (", frac(mmol, g(Cells)),")"))) + xlab("Time (days)") +
+  geom_line(data = subset(SimNanni1977$Simulation, Treatment == "A"), aes(Time, ATP/W*1000), lwd = 1.2) #+
+  geom_line(data = (SimNanni1977M$Simulation), aes(Time, ATP/W), lwd = 1.5, color = "grey") +
+  geom_line(data = (SimNanni1977P$Simulation), aes(Time, ATP/W), lwd = 1.5, color = "grey30", lty = 2)
+
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~Blagodatskaya et al. (2014)~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
+#Data
+BData = read.csv("../SoilMBVariabilityData/Blagodatskaya2014.csv")
+#Visualizing the data
+##CO2
+ggplot(BData, aes(Time, CO2)) + geom_point(cex=6, pch=21, fill = "grey") + facet_grid(.~Treatment) +
+  theme_min + ylab(expression(paste("Cumulative respoiration (", mu, "mol(C) ", g^{-1}, ")"))) + xlab("Time (days)") 
+##DNA
+ggplot(BData, aes(Time, DNA)) + geom_point(cex=6, pch=21, fill = "grey") + facet_grid(.~Treatment) +
+  theme_min + ylab(expression(paste("DNA (nmol(C) ", g^{-1}, ")"))) + xlab("Time (days)") 
+
+#Model calibration
+##Reading respective python scripts
+source_python("../PythonScripts/IndividualStudies/Blag2014ODESolv.py") 
+source_python("../PythonScripts/IndividualStudies/DEBmodel.py") 
+##Reading objective function
+source("IndividualStudies/BObjective.R")
+##Optimization
+##First guess by MCMC 
+BP <- modMCMC(BObjective, p = c(Parms[1:6,1], 1e-3), 
+              lower = c(Parms[1:6, 2], 0),
+              upper = c(Parms[1:6, 3], 1), niter = 30000)
+summary(BP)
+##Estimate
+ParmsBlag2014 <- abc_optim(fn = BObjective, 
+                            par = as.numeric(summary(BP)[c("mean"), ]), 
+                            lb = as.numeric(summary(BP)[c("min"), ]), 
+                            ub = as.numeric(summary(BP)[c("max"), ])) 
+ParmsBlag2014$par
+#==================================================#
+#Goodness of fit and simulations
+source("IndividualStudies/BFit.R")
+SimBlag2014 <- BFit(ParmsBlag2014$par)
+SimBlag2014$errors
+#=====================Save parameters
+parsAll <- rbind(parsAll, data.frame(Study = c("Blagodatskaya et al. (2014)"),
+                                     Treatment = c("Glucose"),
+                                     Im = ParmsBlag2014$par[1], Km = ParmsBlag2014$par[2], 
+                                     yA = ParmsBlag2014$par[3],
+                                     Em = ParmsBlag2014$par[4], m = ParmsBlag2014$par[5], 
+                                     g = ParmsBlag2014$par[6], 
+                                     ne = NA, nX1 = NA, 
+                                     iX1 = ParmsBlag2014$par[7], te = NA, 
+                                     tX1 = NA, re = NA, rX1 = NA, 
+                                     pe = NA, pX1 = NA, 
+                                     le = NA, lX1 = NA))
+#=====================
+
+#=================================
+# Models comparison - F statistic
+#=================================
+##Monod model
+source_python("../PythonScripts/IndividualStudies/Blag2014ODESolvM.py")
+source_python("../PythonScripts/IndividualStudies/Monod.py")
+source("./IndividualStudies/BObjectiveM.R")
+##Optimization
+##First guess by MCMC 
+BPM <- modMCMC(BObjectiveM, p = c(1, 25, 0.5, 1e-3, 0.001), 
+               lower = c(1e-3, 0.1, 0.05, 1e-8, 0),
+               upper = c(100, 3000, 1, 1, 1), niter = 30000)
+##Estimate
+ParmsBlag2014M <- abc_optim(fn = BObjectiveM, par = as.numeric(summary(BPM)["mean", ]), 
+                             lb = as.numeric(summary(BPM)["min", ]), 
+                             ub = as.numeric(summary(BPM)["max", ])) 
+ParmsBlag2014M$par
+#Goodness of fit and simulations
+source("IndividualStudies/BFitM.R")
+SimBlag2014M <- BFitM(ParmsBlag2014M$par)
+SimBlag2014M$errors
+
+##Pirt model
+source_python("../PythonScripts/IndividualStudies/Blag2014ODESolvP.py")
+source_python("../PythonScripts/IndividualStudies/Pirt.py")
+source("./IndividualStudies/BObjectiveP.R")
+##Optimization
+##First guess by MCMC 
+BPP <- modMCMC(BObjectiveP, p = c(1, 25, 0.5, 1e-3, 1e-3, 0.001), 
+               lower = c(1e-3, 0.1, 0.05, 1e-8, 1e-8, 0),
+               upper = c(100, 3000, 1, 1, 1, 1), niter = 30000)
+##Estimate
+ParmsBlag2014P <- abc_optim(fn = BObjectiveP, par = as.numeric(summary(BPP)["mean", ]), 
+                             lb = as.numeric(summary(BPP)["min", ]), 
+                             ub = as.numeric(summary(BPP)["max", ])) 
+ParmsBlag2014P$par
+#Goodness of fit and simulations
+source("IndividualStudies/BFitP.R")
+SimBlag2014P <- BFitP(ParmsBlag2014P$par)
+SimBlag2014P$errors
+#No. of observations
+nt = SimBlag2014P$errors[6]
 #DEB model
-DEBSSRes = 4.23315418 #Weighted residual sum of squares from python (all variables standardized to 0 mean and unit variance)
-DEBpar = 10
+DEBSSRes = SimBlag2014$errors[5]
+DEBpar = SimBlag2014$errors[7]
 #Monod model
-MSSRes = 15.11382047 #Weighted residual sum of squares from python (all variables standardized to 0 mean and unit variance)
-Mpar = 6
+MSSRes = SimBlag2014M$errors[5]
+Mpar = SimBlag2014M$errors[7]
 #Pirt model
-PSSRes = 10.26760821#Weighted residual sum of squares from python (all variables standardized to 0 mean and unit variance)
-Ppar = 7
+PSSRes = SimBlag2014P$errors[5]#Weighted residual sum of squares from python (all variables standardized to 0 mean and unit variance)
+Ppar = SimBlag2014P$errors[7]
 
 #DEB vs Monod
 ####F value =  (M1ss - M2ss)*(nt - M2p)/M2ss/(M2p - M1p)
@@ -1352,61 +1300,140 @@ pf(q=(PSSRes - DEBSSRes)*(nt - DEBpar)/DEBSSRes/(DEBpar - Ppar),
    df2=(nt - DEBpar), 
    lower.tail=F)
 
-#Treatment C
-#DEB model
-DEBSSRes = 3.95964228 #Weighted residual sum of squares from python (all variables standardized to 0 mean and unit variance)
-DEBpar = 10
-#Monod model
-MSSRes = 15.75592723 #Weighted residual sum of squares from python (all variables standardized to 0 mean and unit variance)
-Mpar = 6
-#Pirt model
-PSSRes = 10.5125575#Weighted residual sum of squares from python (all variables standardized to 0 mean and unit variance)
-Ppar = 7
+##Visualizing the fit
+##CO2
+ggplot(BData, aes(Time, CO2)) + geom_point(cex=6, pch=21, fill = "grey") + facet_grid(.~Treatment) +
+  theme_min + ylab(expression(paste("Cumulative respoiration (", mu, "mol(C) ", g^{-1}, ")"))) + xlab("Time (days)") +
+  geom_line(data = (SimBlag2014$Simulation), aes(Time, CO2), lwd = 1.5) +
+  geom_line(data = (SimBlag2014M$Simulation), aes(Time, CO2), lwd = 1.5, color = "grey") +
+  geom_line(data = (SimBlag2014P$Simulation), aes(Time, CO2), lwd = 1.5, color = "grey30", lty = 2)
+##DNA
+ggplot(BData, aes(Time, DNA)) + geom_point(cex=6, pch=21, fill = "grey") + facet_grid(.~Treatment) +
+  theme_min + ylab(expression(paste("DNA (nmol(C) ", g^{-1}, ")"))) + xlab("Time (days)") +
+  geom_line(data = (SimBlag2014$Simulation), aes(Time, DNA), lwd = 1.5) +
+  geom_line(data = (SimBlag2014M$Simulation), aes(Time, DNA), lwd = 1.5, color = "grey") +
+  geom_line(data = (SimBlag2014P$Simulation), aes(Time, DNA), lwd = 1.5, color = "grey30", lty = 2)
 
-#DEB vs Monod
-####F value =  (M1ss - M2ss)*(nt - M2p)/M2ss/(M2p - M1p)
-(MSSRes - DEBSSRes)*(nt - DEBpar)/DEBSSRes/(DEBpar - Mpar)
-
-####associated p value
-pf(q=(MSSRes - DEBSSRes)*(nt - DEBpar)/DEBSSRes/(DEBpar - Mpar), 
-   df1=(DEBpar - Mpar), 
-   df2=(nt - DEBpar), 
-   lower.tail=F)
-
-#DEB vs Pirt
-####F value =  (M1ss - M2ss)*(nt - M2p)/M2ss/(M2p - M1p)
-(PSSRes - DEBSSRes)*(nt - DEBpar)/DEBSSRes/(DEBpar - Ppar)
-
-####associated p value
-pf(q=(PSSRes - DEBSSRes)*(nt - DEBpar)/DEBSSRes/(DEBpar - Ppar), 
-   df1=(DEBpar - Ppar), 
-   df2=(nt - DEBpar), 
-   lower.tail=F)
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~Global optimization~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
-#==============Model parameters and predictions are derived across all studies analyzed above
-#Read predictions calculated in Python
-GlobalFitDE<-read.csv("/mnt/580CBE2464C5F83D/pracovni/data_statistika/SoilMBVariability/PythonScripts/GlobalSearchSpecific/globalResultsDE.csv")
-GlobalFitDE<-read.csv("/mnt/580CBE2464C5F83D/pracovni/data_statistika/SoilMBVariability/PythonScripts/Trials/GS_v12/globalResultsDE.csv")
-GlobalFitDA<-read.csv("/mnt/580CBE2464C5F83D/pracovni/data_statistika/SoilMBVariability/PythonScripts/GlobalSearchSpecific/globalResultsDA.csv")
-GlobalFitDA<-read.csv("/mnt/580CBE2464C5F83D/pracovni/data_statistika/SoilMBVariability/PythonScripts/Trials/GS_v12/globalResultsDA.csv")
+#==============Model parameters and predictions are derived across subset of studies analyzed above
+#==================================================#
+##Parameters, which will be optimized (Initial guess, lower and upper bound) 
+Im0 = c(mean(parsAll$Im), min(parsAll$Im), max(parsAll$Im)) #1
+Km0 = c(mean(parsAll$Km), min(parsAll$Km), max(parsAll$Km)) #2
+yA0 = c(mean(parsAll$yA), min(parsAll$yA), max(parsAll$yA)) #3
+Em0 = c(mean(parsAll$Em), min(parsAll$Em), max(parsAll$Em)) #4
+m0 = c(mean(parsAll$m), min(parsAll$m), max(parsAll$m))     #5
+g0 = c(mean(parsAll$g), min(parsAll$g), max(parsAll$g))     #6
+ne0 = c(mean(parsAll$ne, na.rm = T), min(parsAll$ne, na.rm = T), max(parsAll$ne, na.rm = T)) #7
+nX10 = c(mean(parsAll$nX1, na.rm = T), min(parsAll$nX1, na.rm = T), max(parsAll$nX1, na.rm = T)) #8
+iX10 = c(mean(parsAll$iX1, na.rm = T), 1e-4, 0.1)           #9
+te0 = c(mean(parsAll$te, na.rm = T), min(parsAll$te, na.rm = T), max(parsAll$te, na.rm = T)) #10
+tX10 = c(mean(parsAll$tX1, na.rm = T), min(parsAll$tX1, na.rm = T), max(parsAll$tX1, na.rm = T)) #11
+#le0 = c(mean(parsAll$le, na.rm = T), 0, 0.1)                
+#lX10 = c(mean(parsAll$lX1, na.rm = T), 0, 0.1)             
+#GlE0 = c(0.5, 0, 1)                                         
+#HPE0 = c(0.5, 0, 1)                                         #12
+#BKE0 = c(0.5, 0, 1)                                         #13
+#NE0 = c(0.5, 0, 1)                                         #14
+#ZE0 = c(0.5, 0, 1)                                         
+#Me0 = c(100, 1, 1000)                                       
+#MX10 = c(100, 1, 1000)                                      
+#BlE0 = c(0.5, 0, 1)                                         
 
-ggplot(GlobalFitDE, aes(Observation, Simulation)) + geom_point(cex = 6, aes(color = Study)) + theme_min + 
-  facet_wrap(~Variable, scales = "free") + geom_abline(intercept = 0, slope = 1)
-ggplot(GlobalFitDA, aes(Observation, Simulation)) + geom_point(cex = 6, aes(color = Study)) + theme_min + 
-  facet_wrap(.~Variable, scales = "free") + geom_abline(intercept = 0, slope = 1)
+#============================================= Assuming E0 = 0 ===============================================#
+                
+Parms = rbind(Im0, Km0, yA0, Em0, m0, g0, ne0, nX10, 
+               iX10, te0, tX10)
+#==================================================#
+##Uploading respective functions
+source_python("../PythonScripts/IndividualStudies/DEBmodelIso.py")
+source_python("../PythonScripts/IndividualStudies/DEBmodel.py")
+source_python("../PythonScripts/IndividualStudies/Glanville2016ODESolv.py")
+source("GlobalFit/GlO.R")
+source_python("../PythonScripts/IndividualStudies/Sparling1990ODESolv.py")
+source("GlobalFit/HPO.R")
+source("GlobalFit/SpO.R")
+source_python("../PythonScripts/IndividualStudies/Bremer1990ODESolv.py") 
+source("GlobalFit/BKO.R")
+source_python("../PythonScripts/IndividualStudies/Marstorp1999ODESolv.py") 
+source("GlobalFit/MO.R")
+source_python("../PythonScripts/IndividualStudies/Tsai1997ODESolv.py") 
+source("GlobalFit/TO.R")
+source_python("../PythonScripts/IndividualStudies/Joerg2002ODESolv.py")
+source("GlobalFit/JO.R")
+source_python("../PythonScripts/IndividualStudies/Nanni1977ODESolvATP.py") 
+source("GlobalFit/NO.R")
+source_python("../PythonScripts/IndividualStudies/Blag2014ODESolv.py") 
+source("GlobalFit/BO.R")
+#==================================================#
+##Objective function
+GlobalFit <- function(x){
+  return(sum(
+    BO(x), GlO(x), HPO(x), BKO(x), MO(x), TO(x), JO(x), NO(x) #  ZO(x), SpO2(x), 
+  ))
+}
+#==================================================#
+##Optimization
+###First guess by MCMC 
+GF <- modMCMC(GlobalFit, p = Parms[, 1], 
+              lower = Parms[, 2],
+              upper = Parms[, 3], updatecov = 100, burninlength = 1000, niter = 100000)
+##Estimate
+###Artificial bee-colony algorithm
+GlobalParmsABC <- abc_optim(fn = GlobalFit, par = as.numeric(summary(GF)["mean", ]), 
+                            lb = as.numeric(summary(GF)["min", ]), 
+                            ub = as.numeric(summary(GF)["max", ])) 
+GlobalParmsABC$par
+#==================================================#
+##Visualization
+###Uploading respective functions
+source("GlobalFit/BKFit.R")
+source("GlobalFit/HPFit.R")
+source("GlobalFit/GlFit.R")
+source("GlobalFit/NFitG.R")
+source("GlobalFit/JFitG.R")
+source("GlobalFit/TFitG.R")
+source("GlobalFit/MFitG.R")
+source("GlobalFit/SpFit.R")
+source("GlobalFit/BFit.R")
+##Fit function
+GlobalFitViz <- function(x){
+  return(rbind(
+    BFit(x), GlFit(x),BKFit(x), HPFit(x), NFitG(x), TFitG(x), JFitG(x), MFitG(x) #BFit(x), SpFit2(x), ZFit(x),  
+  ))
+}
+VizOut <- GlobalFitViz(GlobalParmsABC$par)
 
-#Read predictions calculated in Python
-GlobalFitGDE<-read.csv("/mnt/580CBE2464C5F83D/pracovni/data_statistika/SoilMBVariability/PythonScripts/GlobalSearchGeneralized/globalResultsDEGeneralized.csv")
-GlobalFitGDA<-read.csv("/mnt/580CBE2464C5F83D/pracovni/data_statistika/SoilMBVariability/PythonScripts/GlobalSearchGeneralized/globalResultsDAGeneralized.csv")
+#Calculate R squared
+GlobalGoddness <- VizOut %>% group_by(Variable) %>% 
+  summarize(R2 = 1-(sum((Predictions-Observations)^2, na.rm = T)/
+              (sum((mean(Observations, na.rm = T)-Observations)^2, na.rm = T))))
+GlobalGoddness$R2adj <- with(GlobalGoddness, 1 - ((1 - R2)*((nrow(VizOut) - 1)/(nrow(VizOut) - 1 - 11))))
 
-ggplot(GlobalFitGDE, aes(Observation, Simulation)) + geom_point(cex = 6, aes(color = Study)) + theme_min + 
-  facet_wrap(~Variable, scales = "free") + geom_abline(intercept = 0, slope = 1)
-ggplot(GlobalFitGDA, aes(Observation, Simulation)) + geom_point(cex = 6, aes(color = Study)) + theme_min + 
-  facet_wrap(~Variable, scales = "free") + geom_abline(intercept = 0, slope = 1)
+#Labels and annotation
+VizLab <- c('CO2' = "CO[2]", 'DNA' = "DNA", '14CO2' = "atop(14, )~CO[2]", 'kec' = "italic(k[ec])",
+            '14MBC' = "atop(14, )~MBC", '14S' = "atop(14, )~S", 'S' = "S", 'ATP' = "ATP",
+            'Flush' = "CHCl[3]~flush")
+VizAnot <- data.frame(Variable = as.character(GlobalGoddness$Variable), label = c("R^{2}==0.82", "R^{2}==0.93", "R^{2}==0.14",
+                                                         "R^{2}==0.17", "R^{2}==0.61", "R^{2}==0.65",
+                                                         "R^{2}==0.89", "R^{2}==0.50", "R^{2}==0.64"))
 
+ggplot(VizOut, aes(Observations, Predictions)) + geom_point(cex = 6, aes(color = Study)) + theme_min + 
+  geom_text(data = VizAnot, mapping = aes(x = -Inf, y = -Inf, label = label),
+            hjust = -1.6, vjust = -1, parse = T, cex = 6) +
+  facet_wrap(~Variable, scales = "free", labeller = as_labeller(VizLab, label_parsed)) + 
+  geom_abline(intercept = 0, slope = 1) +
+  theme()
+
+#Parameters bounds
+GFf <- modMCMC(GlobalFit, p = GlobalParmsABC$par, 
+               lower = Parms2[, 2],
+               upper = Parms2[, 3], updatecov = 100, burninlength = 1000, niter = 100000)
+summary(GFf)
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~Pitt and Bull 1982~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
@@ -1698,688 +1725,3 @@ parsAll <- rbind(parsAll, data.frame(Study = c("Herbert (1961)"),
                                      re = c(coef(nlsRNA)[2]),  pX1 = c(coef(nlsP)[1]), pe = c(coef(nlsP)[2]),
                                      lX1 = c(NA), le = c(NA)))
 
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~Santruckova et al. unpublished data~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
-#Data
-HData = read.csv("../SoilMBVariabilityData/HankaVidenData.csv")
-#Mark outliers
-HData$outlier<-"NO"
-HData[(HData$WallsProtoDirect>30 & !is.na(HData$WallsProtoDirect)), "outlier"]<-"YES"
-HData[(HData$WallsProtoDirect>6 & !is.na(HData$WallsProtoDirect)), "outlier"]<-"YES"
-HData$outlier2<-"NO"
-HData[(HData$WallsProtoIndirect>10 & !is.na(HData$WallsProtoIndirect) & HData$Exp == "CB"), "outlier2"]<-"YES"
-
-#Visualizing the data
-##Cumulative respiration
-ggplot(HData, aes(Time, Rc)) + geom_point(cex=6, pch=21, aes(fill = Substrate)) +
-  theme_min + ylab(expression(paste("Cumulative respiration (", mu, "mol ",g(DW)^{-1}, ")"))) + xlab("Time (hours)") + 
-  #theme(legend.position = c(0.8, 0.8)) + 
-  facet_grid(.~Exp)
-
-##Microbial cells
-HData %>% filter(outlier2 == "NO") %>% group_by(Substrate, Time, Exp) %>% 
-  summarize(y = mean(Cells, na.rm=T), ySD = sd(Cells, na.rm=T)) %>% 
-  ggplot(aes(Time, y)) + geom_point(cex=6, pch=21, aes(fill = Substrate)) +
-  theme_min + ylab(expression(paste(italic(k[ec])~factor))) + xlab("Time (hours)") + 
-  geom_errorbar(aes(ymin = y - ySD, ymax = y + ySD), width = 0.1) + 
-  facet_wrap(~Exp, scales = "free")
-
-
-##kec factor calculated as cell walls content divided by protoplasm content
-HData %>% filter(outlier == "NO") %>% group_by(Substrate, Time, Exp) %>% 
-  summarize(y = mean(WallsProtoDirect, na.rm=T), ySD = sd(WallsProtoDirect, na.rm=T)) %>% 
-  ggplot(aes(Time, y)) + geom_point(cex=6, pch=21, aes(fill = Substrate)) +
-  theme_min + ylab(expression(paste(italic(k[ec])~factor))) + xlab("Time (hours)") + 
-  geom_errorbar(aes(ymin = y - ySD, ymax = y + ySD), width = 0.1) + 
-  facet_grid(.~Exp)
-
-HData %>% filter(outlier2 == "NO") %>% group_by(Substrate, Time, Exp) %>% 
-  summarize(y = mean(WallsProtoIndirect, na.rm=T), ySD = sd(WallsProtoIndirect, na.rm=T)) %>% 
-  ggplot(aes(Time, y)) + geom_point(cex=6, pch=21, aes(fill = Substrate)) +
-  theme_min + ylab(expression(paste(italic(k[ec])~factor))) + xlab("Time (hours)") + 
-  geom_errorbar(aes(ymin = y - ySD, ymax = y + ySD), width = 0.1) + 
-  facet_wrap(~Exp, scales = "free")
-
-#Testing the volume-specific DEB model
-###Defining the model
-DEBmodel<-function(time, Y, pars){
-  #Pools
-  S = Y[1]
-  e = Y[2]
-  X1 = Y[3]
-  CO2 = Y[4]
-  #Parameters
-  yA = pars[1]
-  Km = pars[2]
-  v = pars[3]
-  m = pars[4]
-  g = pars[5]
-  ce = pars[6]
-  nX1 = pars[7]
-  MX1 = ce/4
-  #scaling function
-  f = S/(Km + S)
-  #Fluxes
-  uptake = (v*ce/yA)*X1*f
-  growth = (v*e - m*g)/(e + g)
-  #Microbial biomass
-  B = (MX1 + ce*e)*X1
-  WallsProto = (nX1*MX1)/(ce*e)
-  #Derivatives
-  dS = -uptake
-  de = v*(f - e)
-  dX1 = growth*X1
-  dCO2 = uptake*(1 - yA) + (X1*e*(v - growth))*ce - growth*X1*MX1
-  
-  return(list(c(dS, de, dX1, dCO2), B = B, WallsProto = WallsProto))
-}
-
-###Exporting data for Python
-###Vidensky experiment, Substrate is Sucrose
-y = as.data.frame(HData %>% filter(Exp == "Viden" & Substrate == "Sucrose" & outlier2 == "NO") %>% 
-                    group_by(Time) %>% summarise(Rc = mean(Rc, na.rm = T),
-                                                 B = mean(Cells, na.rm = T),
-                                                 WP = mean(WallsProtoIndirect, na.rm = T),
-                                                 Sinit = mean(Sinit, na.rm = T)))
-###Vidensky experiment, Substrate is Sodium acetate
-y2 = as.data.frame(HData %>% filter(Exp == "Viden" & Substrate == "Sodium acetate" & outlier2 == "NO") %>% 
-                    group_by(Time) %>% summarise(Rc = mean(Rc, na.rm = T),
-                                                 B = mean(Cells, na.rm = T),
-                                                 WP = mean(WallsProtoIndirect, na.rm = T),
-                                                 Sinit = mean(Sinit, na.rm = T)))
-###CB experiment, Substrate is Sucrose
-y3 = as.data.frame(HData %>% filter(Exp == "CB" & Substrate == "Sucrose" & outlier2 == "NO") %>% 
-                     group_by(Time) %>% summarise(Rc = mean(Rc, na.rm = T),
-                                                  B = mean(Cells, na.rm = T),
-                                                  WP = mean(WallsProtoIndirect, na.rm = T),
-                                                  Sinit = mean(Sinit, na.rm = T)))
-###CB experiment, Substrate is Sucrose
-y4 = as.data.frame(HData %>% filter(Exp == "CB" & Substrate == "Amonnium acetate" & outlier2 == "NO") %>% 
-                     group_by(Time) %>% summarise(Rc = mean(Rc, na.rm = T),
-                                                  B = mean(Cells, na.rm = T),
-                                                  WP = mean(WallsProtoIndirect, na.rm = T),
-                                                  Sinit = mean(Sinit, na.rm = T)))
-y2$WP[1]<-y$WP[1]
-y4$WP[1]<-y3$WP[1]
-write.csv(y, "../SoilMBVariabilityData/VidenSucrose.csv")
-write.csv(y2, "../SoilMBVariabilityData/VidenSodiumAcetate.csv")
-write.csv(y3, "../SoilMBVariabilityData/CBSucrose.csv")
-write.csv(y4, "../SoilMBVariabilityData/CBAmonniumAcetate.csv")
-
-###Parameters were estimated in Python
-parPython = as.numeric(read.csv("../PythonScripts/VidenSucrosePars.csv", header = F))
-DEBPred = read.csv("../PythonScripts/VidenSucrosePred.csv", header = F)
-colnames(DEBPred)<-c("RcV", "CellsV", "WPV")
-DEBPred$Time = seq(0, 125)
-DEBPred$Exp <- "Viden"
-DEBPred$Substrate <- "Sucrose"
-
-parPython2 = as.numeric(read.csv("../PythonScripts/VidenSodiumAcetatePars.csv", header = F))
-DEBPred2 = read.csv("../PythonScripts/VidenSodiumAcetatePred.csv", header = F)
-colnames(DEBPred2)<-c("RcV", "CellsV", "WPV")
-DEBPred2$Time = seq(0, 125)
-DEBPred2$Exp <- "Viden"
-DEBPred2$Substrate <- "Sodium acetate"
-
-parPython3 = as.numeric(read.csv("../PythonScripts/CBSucrose.csv", header = F))
-DEBPred3 = read.csv("../PythonScripts/CBSucrosePred.csv", header = F)
-colnames(DEBPred3)<-c("RcV", "CellsV", "WPV")
-DEBPred3$Time = seq(0, 125)
-DEBPred3$Exp <- "CB"
-DEBPred3$Substrate <- "Sucrose"
-
-parPython4 = as.numeric(read.csv("../PythonScripts/CBAmonniumAcetate.csv", header = F))
-DEBPred4 = read.csv("../PythonScripts/CBAmonniumAcetatePred.csv", header = F)
-colnames(DEBPred4)<-c("RcV", "CellsV", "WPV")
-DEBPred4$Time = seq(0, 125)
-DEBPred4$Exp <- "CB"
-DEBPred4$Substrate <- "Amonnium acetate"
-
-DEBPred<-rbind(DEBPred, DEBPred2, DEBPred3, DEBPred4)
-
-###Visualize the results
-####Cumulative respiration
-HData %>% filter(outlier2 == "NO" & Exp == "Viden") %>% group_by(Time, Substrate, Exp) %>% 
-  summarize(y = mean(Rc, na.rm=T), ySD = sd(Rc, na.rm=T)) %>% 
-  ggplot(aes(Time, y)) + geom_point(cex=6, pch=21, aes(fill = Substrate)) +
-  theme_min + ylab(expression(paste("Cumulative respiration (", mu, "mol ",g(DW)^{-1}, ")"))) + xlab("Time (hours)") + 
-  geom_errorbar(aes(ymin = y - ySD, ymax = y + ySD), width = 0.1) + 
-  geom_line(data = DEBPred[DEBPred$Exp == "Viden", ], aes(Time, RcV, color = Substrate), lwd = 1.5) #+ 
-  facet_wrap(~Exp, scales = "free")
-####Biomass
-HData %>% filter(outlier2 == "NO" & Exp == "Viden") %>% group_by(Time, Substrate, Exp) %>% 
-  summarize(y = mean(Cells, na.rm=T), ySD = sd(Cells, na.rm=T)) %>% 
-  ggplot(aes(Time, y)) + geom_point(cex=6, pch=21, aes(fill = Substrate)) +
-  theme_min + ylab(expression(paste("Microbial biomass (", mu, "mol ",g(DW)^{-1}, ")"))) + xlab("Time (hours)") + 
-  geom_errorbar(aes(ymin = y - ySD, ymax = y + ySD), width = 0.1) + 
-  geom_line(data = DEBPred[DEBPred$Exp == "Viden", ], aes(Time, CellsV, color = Substrate), lwd = 1.5)# + 
-  facet_wrap(~Exp, scales = "free")
-####Walls to protoplasma
-HData %>% filter(outlier2 == "NO" & Exp == "Viden") %>% group_by(Time, Substrate, Exp) %>% 
-  summarize(y = mean(WallsProtoIndirect, na.rm=T), ySD = sd(WallsProtoIndirect, na.rm=T)) %>% 
-  ggplot(aes(Time, y)) + geom_point(cex=6, pch=21, aes(fill = Substrate)) +
-  theme_min + xlab("Time (hours)") + 
-  ylab(expression(paste(frac("Cell walls", "Protoplasm"))))+
-  geom_errorbar(aes(ymin = y - ySD, ymax = y + ySD), width = 0.1) + 
-  geom_line(data = DEBPred[DEBPred$Exp == "Viden", ], aes(Time, WPV, color = Substrate), lwd = 1.5)# + 
-  facet_wrap(~Exp, scales = "free")
-
-#=====================
-# Study, Treatment, yA, Km, v, m, g, ce, nX1, 
-# iX1, ne, rX1, re, pX1, pe, lX1, le
-parsAll <- rbind(parsAll, data.frame(Study = c("Santruckova et al. (unpublished)"),
-                                     Treatment = c("Sucrose", "Sodium acetate"),
-                                     yA = c(parPython[1], parPython2[1]),  Km = c(parPython[2], parPython2[2]), 
-                                     v = c(parPython[3], parPython2[3]), m = c(parPython[4], parPython2[4]),  
-                                     g = c(parPython[5], parPython2[5]), ce = c(parPython[6], parPython2[6]),  
-                                     nX1 = c(parPython[7], parPython2[7]),
-                                     iX1 = c(NA, NA),  tX1 = c(NA, NA), te = c(NA, NA), rX1 = c(NA, NA),
-                                     re = c(NA, NA),  pX1 = c(NA, NA), pe = c(NA, NA),
-                                     lX1 = c(NA, NA), le = c(NA, NA)))
-  
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~Study of Chen et al. (2019)~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
-#Data
-ChenData = read.csv("../SoilMBVariabilityData/Chen2019.csv")
-ChenData$Treatment <- factor(ChenData$Treatment, levels = c("LowP", "HighP"))
-#Visualizing the data
-##14C data
-ggplot(ChenData, aes(Time, C14)) + geom_point(cex = 6, pch = 21, fill = "grey") + theme_min + 
-  facet_grid(.~Treatment) + 
-  ylab(expression(paste(Flush^{~~~14},C," (", mu, mol~g^{-1}, ")"))) +
-  xlab("Time (days")
-##15N data
-ggplot(ChenData, aes(Time, N15)) + geom_point(cex = 6, pch = 21, fill = "grey") + theme_min + 
-  facet_grid(.~Treatment) +
-  ylab(expression(paste(Flush^{~~~15},N," (", mu, mol~g^{-1}, ")"))) +
-  xlab("Time (days")
-##33P data
-ggplot(ChenData, aes(Time, P33)) + geom_point(cex = 6, pch = 21, fill = "grey") + theme_min + 
-  facet_grid(.~Treatment) +
-  ylab(expression(paste(Flush^{~~~33},P," (", mu, mol~g^{-1}, ")"))) +
-  xlab("Time (days")
-
-#===============================DEB model simulations
-ChenPredLowP = read.csv("../PythonScripts/ChenLowPPred.csv", header = F)
-colnames(ChenPredLowP) <- c("C14", "N15", "P33") 
-ChenPredLowP$Time = seq(0, 13, by = 0.5)
-ChenPredLowP$Treatment = c("LowP")
-
-ChenPredHighP = read.csv("../PythonScripts/ChenHighPPred.csv", header = F)
-colnames(ChenPredHighP) <- c("C14", "N15", "P33") 
-ChenPredHighP$Time = seq(0, 13, by = 0.5)
-ChenPredHighP$Treatment = c("HighP")
-
-ChenPred <- rbind(ChenPredLowP, ChenPredHighP)
-ChenPred$Treatment <- factor(ChenPred$Treatment, levels = c("LowP", "HighP"))
-#======================================================================
-#Visualizing predictions
-##14C data
-ggplot(ChenData, aes(Time, C14)) + geom_point(cex = 6, pch = 21, fill = "grey") + theme_min + 
-  facet_wrap(~Treatment, scales = "free_y") + xlim(0, 17) + 
-  geom_line(data = ChenPred, aes(Time+4, C14), lwd = 1.2) +
-  ylab(expression(paste(Flush^{~~~14},C," (", mu, mol~g^{-1}, ")"))) +
-  xlab("Time (days)")
-##15N data
-ggplot(ChenData, aes(Time, N15)) + geom_point(cex = 6, pch = 21, fill = "grey") + theme_min + 
-  facet_wrap(~Treatment, scales = "free_y") + xlim(0, 17) +
-  geom_line(data = ChenPred, aes(Time+4, N15), lwd = 1.2) + 
-  ylab(expression(paste(Flush^{~~~15},N," (", mu, mol~g^{-1}, ")"))) +
-  xlab("Time (days)")
-##33P data
-ggplot(ChenData, aes(Time, P33)) + geom_point(cex = 6, pch = 21, fill = "grey") + theme_min + 
-  facet_wrap(~Treatment, scales = "free_y") + xlim(0, 17) +
-  geom_line(data = ChenPred, aes(Time+4, P33), lwd = 1.2) + 
-  ylab(expression(paste(Flush^{~~~33},P," (", mu, mol~g^{-1}, ")"))) +
-  xlab("Time (days)")
-
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~Theoretical CUE variability~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
-##Simulation is performed for following scenarios:
-###X1 = 5 umol(C)/g
-###e = 0, 0.5, 1
-###S = 25 umol(C)/g
-###CUE is measured and labeled C flush or DNA divided by amount of C taken up
-
-#=============================ODE system is defined
-DEBmodel<-function(time, Y, p){
-  #Pools
-  Sl = Y[1] #labeled substrate 
-  el = Y[2] #labeled reserves
-  eu = Y[3] #unlabeled reserves
-  X1l = Y[4] # labeled structure
-  X1u = Y[5] #unlabeled structures
-  CO2l = Y[6] #labeled CO2
- 
-  #Parameters
-  yA=p[1]
-  Km=p[2]     
-  v=p[3]
-  m=p[4] 
-  g=p[5] 
-  ce=p[6]
-  MX1=ce/4
-  nX1 = p[7]
-  iX1 = p[8]
-  #kec
-  kec = (nX1*0.25 + eu + el)/(0.25 + el + eu)
-  #kDNA
-  kdna = (iX1*0.25)/(0.25 + el + eu)
-  
-  #Scaling function for substrate uptake
-  f=Sl/(Km+Sl) #labeled substrate only
-  
-  #Isotope signals
-  eatm = el/(eu + el)
-  X1atm = X1l/(X1l + X1u)
-  
-  #Labeled biomass
-  Bl = X1l*0.25*ce + (X1l + X1u)*ce*el
-  #Unlabeled biomass
-  Bu = X1u*0.25*ce + (X1l + X1u)*ce*eu
-  
-  #Labeled chloroform flush
-  Flushl = kec*Bl
-  #Labeled DNA
-  DNAl = kdna*Bl
-  
-  #Fluxes
-  uptake=(v*ce/yA)*(X1l+X1u)*f #labeled substrate only
-  growth = (v*(el+eu)-m*g)/(el + eu + g)
-  
-  #Derivatives
-  dSl = -uptake
-  del = v*(f - el)
-  deu = -v*eu
-  dX1l = max(0, (X1l + X1u)*growth*eatm) + min(0, (X1l + X1u)*growth*X1atm)
-  dX1u = max(0, (X1l + X1u)*growth*(1 - eatm)) + min(0, (X1l + X1u)*growth*(1 - X1atm))
-  dCO2l = (ce*(X1l + X1u)*(el + eu)*(v - growth)*eatm) - max(0, (X1l + X1u)*growth*eatm)*MX1 - min(0, (X1l + X1u)*growth*X1atm)*MX1
-    
-  return(list(c(dSl, del, deu, dX1l, dX1u, dCO2l), 
-              kec = as.numeric(kec), kdna = as.numeric(kdna), Bl = as.numeric(Bl), Bu = as.numeric(Bu), 
-              Flushl = as.numeric(Flushl), DNAl = as.numeric(DNAl)))
-}
-
-#=============================
-#Model parameters (pmodel)
-debpars = c(p[1], p[2], v = mean(parsAll$v[c(1:5, 7:11, 13, 14, 17:20)]),
-            p[4], p[5], p[7], nX1 = mean(parsAll$nX1, na.rm = T), iX1 = mean(parsAll$iX1, na.rm = T))
-#Time
-t = seq(0, 7, by = 0.1)
-
-#====For e = 1
-simOut_e1 = as.data.frame(ode(y = c(Sl = 5, el = 0, eu = 1, X1l = 0, X1u = (25*4/debpars[["ce"]]), CO2l = 0),
-                              parms = debpars, times = t, func = DEBmodel))
-simOut_e1$e = 1
-#====For e = 0.5
-simOut_e05 = as.data.frame(ode(y = c(Sl = 5, el = 0, eu = 0.5, X1l = 0, X1u = (25*4/debpars[["ce"]]), CO2l = 0),
-                              parms = debpars, times = t, func = DEBmodel))
-simOut_e05$e = 0.5
-#====For e = 0
-DEBmodel0<-function(time, Y, p){
-  #Pools
-  Sl = Y[1] #labeled substrate 
-  el = Y[2] #labeled reserves
-  X1l = Y[3] # labeled structure
-  X1u = Y[4] #unlabeled structures
-  CO2l = Y[5] #labeled CO2
-  
-  #Parameters
-  yA=p[1]
-  Km=p[2]     
-  v=p[3]
-  m=p[4] 
-  g=p[5] 
-  ce=p[6]
-  MX1=ce/4
-  nX1 = p[7]
-  iX1 = p[8]
-  #kec
-  kec = (nX1*0.25 + el)/(0.25 + el)
-  #kDNA
-  kdna = (iX1*0.25)/(0.25 + el)
-  
-  #Scaling function for substrate uptake
-  f=Sl/(Km+Sl) #labeled substrate only
-  
-  #Isotope signals
-  eatm = 1
-  X1atm = X1l/(X1l + X1u)
-  
-  #Labeled biomass
-  Bl = X1l*0.25*ce + (X1l + X1u)*ce*el
-  #Labeled biomass
-  Bu = X1u*0.25*ce
- 
-  #Labeled chloroform flush
-  Flushl = kec*Bl
-  #Labeled DNA
-  DNAl = kdna*Bl
-  
-  #Fluxes
-  uptake=(v*ce/yA)*(X1l+X1u)*f #labeled substrate only
-  growth = (v*el-m*g)/(el + g)
-  
-  #Derivatives
-  dSl = -uptake
-  del = v*(f - el)
-  dX1l = max(0, (X1l + X1u)*growth) + min(0, (X1l + X1u)*growth*X1atm)
-  dX1u = min(0, (X1l + X1u)*growth*(1 - X1atm))
-  dCO2l = (ce*(X1l + X1u)*el*(v - growth)) - max(0, (X1l + X1u)*growth)*MX1 - min(0, (X1l + X1u)*growth*X1atm)*MX1
-  
-  return(list(c(dSl, del, dX1l, dX1u, dCO2l), 
-              kec = as.numeric(kec), kdna = as.numeric(kdna), Bl = as.numeric(Bl), Bu = as.numeric(Bu),
-              Flushl = as.numeric(Flushl), DNAl = as.numeric(DNAl)))
-}
-
-
-simOut_e0 = as.data.frame(ode(y = c(Sl = 5, el = 0, X1l = 0, X1u = (25*4/debpars[["ce"]]), CO2l = 0),
-                               parms = debpars, times = t, func = DEBmodel0))
-simOut_e0$e = 0
-simOut_e0$eu = NA
-
-simOut <- rbind(simOut_e0, simOut_e05, simOut_e1)
-
-#=============================Visualization
-##calculate CUE for chloroform Flush and DNA
-simOut$CUEFlush <- with(simOut, (Flushl/0.41)/((Flushl/0.41) + CO2l))
-###Total DNA and MBC
-simOut$DNA <- with(simOut, (Bl + Bu)*kDNA)
-simOut$MBC <- with(simOut, (Bl + Bu)*kec/0.41)
-simOut$CUEDNA <- with(simOut, (DNAl*10.9)/((DNAl*10.9) + CO2l))
-simOut$CUE <- with(simOut, Bl/(Bl + CO2l))
-
-simOut2 <- simOut[simOut$time<3, c("time", "CUEFlush", "CUEDNA", "e")]
-simOut2$e <- as.factor(simOut2$e)
-SimOut2 <- melt(simOut2, id.vars = c("time", "e"))
-levels(SimOut2$e) <- c("italic(e==0)", "italic(e==0.5)", "italic(e==1)")
-
-ggplot(SimOut2, aes(time, value)) + geom_line(aes(color = variable), lwd = 1) + theme_min + 
-  geom_hline(yintercept = 1/(1 + debpars[5])) + facet_grid(.~e, labeller = label_parsed) + xlab("Time (days)") +
-  scale_y_continuous(limits = c(0, 1), breaks = c(0, 0.25, 0.5, 0.75, 1)) +
-  ylab("Carbon use efficiency") + 
-  scale_color_manual(values = c("black", "grey60"), 
-                     labels = c(expression(paste(italic(CUE[CFE]))), expression(paste(italic(CUE[DNA]))))) +
-  theme(legend.title = element_blank(), legend.position = c(0.9, 0.8))
-
-simOut3 <- simOut[simOut$time<3, c("time", "kec", "kdna", "e")]
-simOut3$e <- as.factor(simOut3$e)
-SimOut3 <- melt(simOut3, id.vars = c("time", "e"))
-levels(SimOut3$e) <- c("italic(e==0)", "italic(e==0.5)", "italic(e==1)")
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~Death ENDs~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
-#Differentiating surface- and volume-specific fluxes
-##When fluxes are divided into surface and volume-specific, then the change of e over time is
-##given by the differential equation
-##de/dt = v*X1^(-1/3)*e
-##change of X1 over time is defined as:
-##dX1/dt = mu*X1 where mu = (v*X1^(-1/3)*e - m*g)/(e + g)
-##So three new parameters are defined m - specific maintenance rate, g - scaled growth energy demand, and X1 at time 0
-
-##ODE system is defined
-DEBmodel<-function(time, Y, p){
-  #Pools
-  e = Y[1]
-  X1 = Y[2]
-  #Parameters
-  nX1 = p[1]
-  v = p[2]
-  m = p[3]
-  g = p[4]
-  k = p[5]
-  #kec
-  kec = (nX1/4 + e)/(0.25 + e)
-  #Derivatives
-  de = - v*e*X1^{-1/3} + k*e
-  dX1 = X1*((v*e*X1^{-1/3} - m*g)/(e + g)) - k*X1
-  return(list(c(de, dX1), kec = kec))
-}
-##Fitting the model to Alanine data
-###Parameter matrix - (initial guess, lower and upper bounds)
-PDEB = matrix(data = c(
-  10, 0.001, 500, #X1(0)
-  DEBcoefs1[2], 0, 1, #e0
-  DEBcoefs1[1], 0, 1, #NX1
-  DEBcoefs1[4], 0.01, 10, #v
-  0.01, 1e-12, 0.1, #m
-  0.3, 0.1, 3, #g
-  0.01, 1e-12, 0.1 #k
-), ncol = 3, nrow = 7, byrow = T)
-
-###Cost function
-costALA<-function(x){
-  s = ode(y=c(e=x[2], X1=x[1]), func = DEBmodel, parms=x[3:7],
-      times = as.numeric(GlData[GlData$Substrate=="Alanin", "Time"])/24, method = "daspk")[,4]
-  #Root mean square error
-  return(sum(((s - as.numeric(GlData[GlData$Substrate=="Alanin", "kec_original"]))/(as.numeric(GlData[GlData$Substrate=="Alanin", "Time"])/24))^2, na.rm = T))
-}
-
-###Parameters estimation using MCMC
-ALAmcmc<-modMCMC(f=costALA, p=PDEB[, 1], lower=PDEB[, 2], upper=PDEB[, 3], niter=10000)
-summary(ALAmcmc)
-###Improving the estimation using differential evolution algorithm
-ALA_parDE<-DEoptim(fn=costALA, lower=as.numeric(summary(ALAmcmc)["min",]), upper=as.numeric(summary(ALAmcmc)["max",]), 
-                 control = c(itermax = 10000, steptol = 50, reltol = 1e-8, trace=FALSE, strategy=3, NP=250))
-ALA_parDE$optim$bestmem
-###or artificial bee colony algorithm
-ALA_parABC<-abc_optim(fn=costALA, par=as.numeric(summary(ALAmcmc)["mean",]), 
-                      lb=as.numeric(summary(ALAmcmc)["min",]), 
-                      ub=as.numeric(summary(ALAmcmc)["max",]), maxCycle = 1e6)
-ALA_parABC$par
-
-###Visualizing the data
-ALAsim<-data.frame(Time = seq(0, 50, by = 0.5))
-ALAsim$SimDE<-ode(y=c(e=ALA_parDE$optim$bestmem[2], X1=ALA_parDE$optim$bestmem[1]), func = DEBmodel, 
-                  parms=ALA_parDE$optim$bestmem[3:7],
-                  times = seq(0, 50, by = 0.5), method = "daspk")[,4]
-ALAsim$SimABC<-ode(y=c(e=ALA_parABC$par[2], X1=ALA_parABC$par[1]), func = DEBmodel, 
-                  parms=ALA_parABC$par[3:7],
-                  times = seq(0, 50, by = 0.5), method = "daspk")[,4]
-ALAsim$SimMCMCa<-ode(y=c(e=ALAmcmc$bestpar[2], X1=ALAmcmc$bestpar[1]), func = DEBmodel, 
-                   parms=ALAmcmc$bestpar[3:7],
-                   times = seq(0, 50, by = 0.5), method = "daspk")[,4]
-ALAsim$SimMCMCb<-ode(y=c(e=as.numeric(summary(ALAmcmc)["mean",])[2], X1=as.numeric(summary(ALAmcmc)["mean",])[1]), func = DEBmodel, 
-                     parms=as.numeric(summary(ALAmcmc)["mean",])[3:7],
-                     times = seq(0, 50, by = 0.5), method = "daspk")[,4]
-
-
-ggplot(subset(GlData, Substrate == "Alanin"), aes(Time/24, kec_original)) + 
-  geom_point(cex=6, pch=21) +
-  theme_min + ylab(expression(paste(italic(k[ec])~factor))) + xlab("Time (days)") + 
-  geom_line(data = ALAsim, aes(Time, SimDE), lwd=1.5)+
-  geom_line(data = ALAsim, aes(Time, SimABC), lwd=1.5) #+
-  geom_line(data = ALAsim, aes(Time, SimMCMCa), lwd=1.5)
-
-#Assumption 6: Substrates are taken up by two different types of carriers - high and low efficiency carrier 
-#associated with v1 and v2, respectively
-##ODE system is defined
-DEBmodel<-function(time, Y, p){
-  #Pools
-  e = Y
-  #Parameters
-  nX1 = p[1]
-  v1 = p[2]
-  v2 = p[3]
-  #kec
-  kec = (nX1/4 + e)/(0.25 + e)
-  #Derivatives
-  de = - v1*e - v2*e
-  return(list(c(de), kec = kec))
-}
-##Fitting the model to Alanine data
-###Parameter space - (initial guess, lower and upper bounds)
-PDEB = matrix(data = c(
-  DEBcoefs1[2], 0, 1, #e0
-  DEBcoefs1[1], 0, 1, #NX1
-  DEBcoefs1[4], 0.01, 10, #v1
-  DEBcoefs1[4], 0.01, 10 #v2
-), ncol = 3, nrow = 4, byrow = T)
-
-###Cost function
-costALA<-function(x){
-  s = ode(y=c(e=x[1]), func = DEBmodel, parms=x[2:4],
-          times = as.numeric(GlData[GlData$Substrate=="Alanin", "Time"])/24)[,3]
-  #Root mean square error
-  return(sum(((s - as.numeric(GlData[GlData$Substrate=="Alanin", "kec_original"])))^2, na.rm = T))
-}
-
-###Parameters estimation using MCMC
-ALAmcmc<-modMCMC(f=costALA, p=PDEB[, 1], lower=PDEB[, 2], upper=PDEB[, 3], niter=10000)
-summary(ALAmcmc)
-###Improving the estimation using differential evolution algorithm
-ALA_parDE<-DEoptim(fn=costALA, lower=as.numeric(summary(ALAmcmc)["min",]), upper=as.numeric(summary(ALAmcmc)["max",]), 
-                   control = c(itermax = 10000, steptol = 50, reltol = 1e-8, trace=FALSE, strategy=3, NP=250))
-ALA_parDE$optim$bestmem
-###or artificial bee colony algorithm
-ALA_parABC<-abc_optim(fn=costALA, par=as.numeric(summary(ALAmcmc)["mean",]), 
-                      lb=as.numeric(summary(ALAmcmc)["min",]), 
-                      ub=as.numeric(summary(ALAmcmc)["max",]), maxCycle = 1e6)
-ALA_parABC$par
-
-###Visualizing the data
-ALAsim<-data.frame(Time = seq(0, 50, by = 0.5))
-ALAsim$SimDE<-ode(y=c(e=ALA_parDE$optim$bestmem[1]), func = DEBmodel, 
-                  parms=ALA_parDE$optim$bestmem[2:4],
-                  times = seq(0, 50, by = 0.5))[,3]
-ALAsim$SimABC<-ode(y=c(e=ALA_parABC$par[1]), func = DEBmodel, 
-                   parms=ALA_parABC$par[2:4],
-                   times = seq(0, 50, by = 0.5))[,3]
-ALAsim$SimMCMCa<-ode(y=c(e=ALAmcmc$bestpar[1]), func = DEBmodel, 
-                     parms=ALAmcmc$bestpar[2:4],
-                     times = seq(0, 50, by = 0.5))[,3]
-ALAsim$SimMCMCb<-ode(y=c(e=as.numeric(summary(ALAmcmc)["mean",])[1]), func = DEBmodel, 
-                     parms=as.numeric(summary(ALAmcmc)["mean",])[2:4],
-                     times = seq(0, 50, by = 0.5))[,3]
-
-
-ggplot(subset(GlData, Substrate == "Alanin"), aes(Time/24, kec_original)) + 
-  geom_point(cex=6, pch=21) +
-  theme_min + ylab(expression(paste(italic(k[ec])~factor))) + xlab("Time (days)") + 
-  geom_line(data = ALAsim, aes(Time, SimDE), lwd=1.5)+
-  geom_line(data = ALAsim, aes(Time, SimABC), lwd=1.5) 
-
-#Testing the surface- and volume-specific DEB model
-###Defining the model
-DEBmodelSV<-function(time, Y, pars){
-  #Pools
-  S = Y[1]
-  e = Y[2]
-  X1 = Y[3]
-  CO2 = Y[4]
-  #Parameters
-  yA = pars[1]
-  Km = pars[2]
-  v = pars[3]
-  m = pars[4]
-  g = pars[5]
-  ce = pars[6]
-  nX1 = pars[7]
-  MX1 = ce/4
-  #scaling function
-  f = S/(Km + S)
-  #Fluxes
-  uptake = (v*ce/yA)*(X1^(2/3))*f
-  growth = (v*e*(X1^(-1/3)) - m*g)/(e + g)
-  #Microbial biomass
-  B = (MX1 + ce*e)*X1
-  WallsProto = (nX1*MX1)/(ce*e)
-  #Derivatives
-  dS = -uptake
-  de = v*(X1^(-1/3))*(f - e)
-  dX1 = growth*X1
-  dCO2 = uptake*(1 - yA) + ce*(X1*e*(v*X1^(-1/3)-growth)) - growth*X1*MX1
-  
-  return(list(c(dS, de, dX1, dCO2), B = B, WallsProto = WallsProto))
-}
-
-###Parameters were estimated in Python
-parPythonSV = as.numeric(read.csv("../PythonScripts/VidenSucroseParsSV.csv", header = F))
-###Visualize the results
-DEBPred$RcSV <- ode(y = c(S = y$Sinit[1], 
-                          e = parPythonSV[7]/4/y$WP[1], 
-                          X1 = y$B[1]/(parPythonSV[6]*(0.25 + parPythonSV[7]/4/y$WP[1])), 0), 
-                    func = DEBmodelSV, parms = parPythonSV, method = "daspk",
-                    times = DEBPred$Time)[, 5]
-DEBPred$CellsSV <- ode(y = c(S = y$Sinit[1], 
-                             e = parPythonSV[7]/4/y$WP[1], 
-                             X1 = y$B[1]/(parPythonSV[6]*(0.25 + parPythonSV[7]/4/y$WP[1])), 0), 
-                       func = DEBmodelSV, parms = parPythonSV, method = "daspk",
-                       times = DEBPred$Time)[, 6]
-DEBPred$WPSV <- ode(y = c(S = y$Sinit[1], 
-                          e = parPythonSV[7]/4/y$WP[1], 
-                          X1 = y$B[1]/(parPythonSV[6]*(0.25 + parPythonSV[7]/4/y$WP[1])), 0), 
-                    func = DEBmodelSV, parms = parPythonSV, method = "daspk",
-                    times = DEBPred$Time)[, 7]
-
-####Cumulative respiration
-HData %>% filter(outlier2 == "NO" & Substrate == "Sucrose" & Exp == "Viden") %>% group_by(Time) %>% 
-  summarize(y = mean(Rc, na.rm=T), ySD = sd(Rc, na.rm=T)) %>% 
-  ggplot(aes(Time, y)) + geom_point(cex=6, pch=21, fill = "grey") +
-  theme_min + ylab(expression(paste("Cumulative respiration (", mu, "mol ",g(DW)^{-1}, ")"))) + xlab("Time (hours)") + 
-  geom_errorbar(aes(ymin = y - ySD, ymax = y + ySD), width = 0.1) + 
-  geom_line(data = DEBPred, aes(Time, RcV), lwd = 1.5) +
-  geom_line(data = DEBPred, aes(Time, RcSV), lwd = 1.5, color = "red")
-####Biomass
-HData %>% filter(outlier2 == "NO" & Substrate == "Sucrose" & Exp == "Viden") %>% group_by(Time) %>% 
-  summarize(y = mean(Cells, na.rm=T), ySD = sd(Cells, na.rm=T)) %>% 
-  ggplot(aes(Time, y)) + geom_point(cex=6, pch=21, fill = "grey") +
-  theme_min + ylab(expression(paste("Microbial biomass (", mu, "mol ",g(DW)^{-1}, ")"))) + xlab("Time (hours)") + 
-  geom_errorbar(aes(ymin = y - ySD, ymax = y + ySD), width = 0.1) + 
-  geom_line(data = DEBPred, aes(Time, CellsV), lwd = 1.5) +
-  geom_line(data = DEBPred, aes(Time, CellsSV), lwd = 1.5, color = "red")
-####Walls to protoplasma
-HData %>% filter(outlier2 == "NO" & Substrate == "Sucrose" & Exp == "Viden") %>% group_by(Time) %>% 
-  summarize(y = mean(WallsProtoIndirect, na.rm=T), ySD = sd(WallsProtoIndirect, na.rm=T)) %>% 
-  ggplot(aes(Time, y)) + geom_point(cex=6, pch=21, fill = "grey") +
-  theme_min + xlab("Time (hours)") + 
-  geom_errorbar(aes(ymin = y - ySD, ymax = y + ySD), width = 0.1) + 
-  geom_line(data = DEBPred, aes(Time, WPV), lwd = 1.5) +
-  geom_line(data = DEBPred, aes(Time, WPSV), lwd = 1.5, color = "red")
-
-#Estimating parameters across substrates 
-##According the individual set of parameters estimated above, only parameters allowed to
-##vary across substrates are yA and v. The rest is fixed
-###Parameters were estimated in Python
-DEBPredViden = read.csv("../PythonScripts/VidenPred.csv", header = F)
-colnames(DEBPredViden)<-c("RcV", "CellsV", "WPV")
-DEBPredViden$Time = rep(seq(0, 125), 2)
-DEBPredViden$Exp <- "Viden"
-DEBPredViden$Substrate <- rep(c("Sucrose", "Sodium acetate"), each = 126)
-
-DEBPredCB = read.csv("../PythonScripts/CBPred.csv", header = F)
-colnames(DEBPredCB)<-c("RcV", "CellsV", "WPV")
-DEBPredCB$Time = rep(seq(0, 125), 2)
-DEBPredCB$Exp <- "CB"
-DEBPredCB$Substrate <- rep(c("Sucrose", "Amonnium acetate"), each = 126)
-
-DEBPredSubstrates <- rbind(DEBPredViden, DEBPredCB)
-
-###Visualize the results
-####Cumulative respiration
-HData %>% filter(outlier2 == "NO") %>% group_by(Time, Substrate, Exp) %>% 
-  summarize(y = mean(Rc, na.rm=T), ySD = sd(Rc, na.rm=T)) %>% 
-  ggplot(aes(Time, y)) + geom_point(cex=6, pch=21, aes(fill = Substrate)) +
-  theme_min + ylab(expression(paste("Cumulative respiration (", mu, "mol ",g(DW)^{-1}, ")"))) + xlab("Time (hours)") + 
-  geom_errorbar(aes(ymin = y - ySD, ymax = y + ySD), width = 0.1) + 
-  geom_line(data = DEBPredSubstrates, aes(Time, RcV, color = Substrate), lwd = 1.5) + 
-  facet_wrap(~Exp, scales = "free")
-####Biomass
-HData %>% filter(outlier2 == "NO") %>% group_by(Time, Substrate, Exp) %>% 
-  summarize(y = mean(Cells, na.rm=T), ySD = sd(Cells, na.rm=T)) %>% 
-  ggplot(aes(Time, y)) + geom_point(cex=6, pch=21, aes(fill = Substrate)) +
-  theme_min + ylab(expression(paste("Microbial biomass (", mu, "mol ",g(DW)^{-1}, ")"))) + xlab("Time (hours)") + 
-  geom_errorbar(aes(ymin = y - ySD, ymax = y + ySD), width = 0.1) + 
-  geom_line(data = DEBPredSubstrates, aes(Time, CellsV, color = Substrate), lwd = 1.5) + 
-  facet_wrap(~Exp, scales = "free")
-####Walls to protoplasma
-HData %>% filter(outlier2 == "NO") %>% group_by(Time, Substrate, Exp) %>% 
-  summarize(y = mean(WallsProtoIndirect, na.rm=T), ySD = sd(WallsProtoIndirect, na.rm=T)) %>% 
-  ggplot(aes(Time, y)) + geom_point(cex=6, pch=21, aes(fill = Substrate)) +
-  theme_min + xlab("Time (hours)") + 
-  ylab(expression(paste(frac("Cell walls", "Protoplasm"))))+
-  geom_errorbar(aes(ymin = y - ySD, ymax = y + ySD), width = 0.1) + 
-  geom_line(data = DEBPredSubstrates, aes(Time, WPV, color = Substrate), lwd = 1.5) + 
-  facet_wrap(~Exp, scales = "free")
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
