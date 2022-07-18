@@ -296,25 +296,29 @@ SimSantruckova2004$errors
 ggplot(HPData, aes(Time, CO2)) + geom_point(cex=6, pch=21, fill = "grey") +
   theme_min + ylab(expression(paste("Cumul. resp. (", mu, "mol ", atop(14, ), "C " , g^{-1}, ")"))) + 
   xlab("Time (days)") +
-  geom_line(data = (SimSantruckova2004$Simulation), aes(Time, CO2), lwd = 1.2)
+  geom_line(data = (SimSantruckova2004$Simulation), aes(Time, CO2), lwd = 1.2) +
+  ggtitle("A)")
 
 ##Substrate concentration
 ggplot(HPData, aes(Time, S)) + geom_point(cex=6, pch=21, fill = "grey") +
   theme_min + ylab(expression(paste("Glucose (", mu, "mol ", atop(14, ), "C " , g^{-1}, ")"))) + 
   xlab("Time (days)") +
-  geom_line(data = (SimSantruckova2004$Simulation), aes(Time, S), lwd = 1.2)
+  geom_line(data = (SimSantruckova2004$Simulation), aes(Time, S), lwd = 1.2) +
+  ggtitle("B)")
 
 ##Cmic 14
 ggplot(HPData, aes(Time, Flush)) + geom_point(cex=6, pch=21, fill = "grey") +
   theme_min + ylab(expression(paste(CHCl[3] ," flush (", mu, "mol ", atop(14, ), "C " , g^{-1}, ")"))) + 
   xlab("Time (days)") +
-  geom_line(data = (SimSantruckova2004$Simulation), aes(Time, Flush), lwd = 1.2)
+  geom_line(data = (SimSantruckova2004$Simulation), aes(Time, Flush), lwd = 1.2) +
+  ggtitle("C)")
 
 ##kec factor
 ggplot(HPData, aes(Time, kec)) + geom_point(cex=6, pch=21, fill = "grey") +
   theme_min + ylab(expression(paste(italic(k[ec])~factor))) + xlab("Time (days)") + #ylim(0.20, 0.35) +
   geom_line(data = (SimSantruckova2004$Simulation), aes(Time, kec), lwd = 1.2) +
-  scale_y_continuous(limits = c(0.2, 0.5))
+  scale_y_continuous(limits = c(0.2, 0.5)) +
+  ggtitle("D)")
 #=====================Save parameters
 parsAll <- rbind(parsAll, data.frame(Study = c("Santruckova et al. (2004)"),
                                      Treatment = c("Glucose"),
@@ -562,7 +566,8 @@ ggplot(MData, aes(Time, DNA)) + geom_point(cex=6, pch=21, fill = "grey") +
 ##DNA/Flush
 ggplot(MData, aes(Time, DNA*1000/Flush)) + geom_point(cex=6, pch=21, fill = "grey") +
   theme_min + ylab(expression(paste(frac(DNA, CHCl[3]~Flush), "   (", frac(mmol, mol), ")"))) + xlab("Time (days)") +
-  geom_line(data = (SimMarstorp1999$Simulation), aes(Time, DNA*1000/Flush), lwd = 1.2) 
+  geom_line(data = (SimMarstorp1999$Simulation), aes(Time, DNA*1000/Flush), lwd = 1.2) +
+  ggtitle("E)")
   #geom_line(data = (SimMarstorp1999M$Simulation), aes(Time, DNA*1000/Flush), lwd = 1.5, color = "grey") +
   #geom_line(data = (SimMarstorp1999P$Simulation), aes(Time, DNA*1000/Flush), lwd = 1.5, color = "grey30", lty = 2)
 
@@ -1373,7 +1378,7 @@ source("GlobalFit/BO.R")
 ##Objective function
 GlobalFit <- function(x){
   return(sum(
-    BO(x), GlO(x), HPO(x), BKO(x), MO(x), TO(x), JO(x), NO(x) #  ZO(x), SpO2(x), 
+    BO(x), GlO(x), HPO(x), MO(x), TO(x), JO(x), NO(x) #  ZO(x), SpO2(x), BKO(x),
   ))
 }
 #==================================================#
@@ -1403,15 +1408,15 @@ source("GlobalFit/BFit.R")
 ##Fit function
 GlobalFitViz <- function(x){
   return(rbind(
-    BFit(x), GlFit(x),BKFit(x), HPFit(x), NFitG(x), TFitG(x), JFitG(x), MFitG(x) #BFit(x), SpFit2(x), ZFit(x),  
+    BFit(x), GlFit(x),BKFit(x), HPFit(x), NFitG(x), TFitG(x), JFitG(x), MFitG(x) #SpFit2(x), ZFit(x),  
   ))
 }
 VizOut <- GlobalFitViz(GlobalParmsABC$par)
 
 #Calculate R squared
 GlobalGoddness <- VizOut %>% group_by(Variable) %>% 
-  summarize(R2 = 1-(sum((Predictions-Observations)^2, na.rm = T)/
-              (sum((mean(Observations, na.rm = T)-Observations)^2, na.rm = T))))
+  summarize(R2 = 1-(sum((Observations-Predictions)^2, na.rm = T)/
+              (sum((Observations-(mean(Observations, na.rm = T)))^2, na.rm = T))))
 GlobalGoddness$R2adj <- with(GlobalGoddness, 1 - ((1 - R2)*((nrow(VizOut) - 1)/(nrow(VizOut) - 1 - 11))))
 
 #Labels and annotation
@@ -1726,3 +1731,27 @@ parsAll <- rbind(parsAll, data.frame(Study = c("Herbert (1961)"),
                                      re = c(coef(nlsRNA)[2]),  pX1 = c(coef(nlsP)[1]), pe = c(coef(nlsP)[2]),
                                      lX1 = c(NA), le = c(NA)))
 
+
+#==================Growth rate - E/Em relationship
+#Parameters
+p <- GlobalParmsABC$par
+names(p) <- c("Im", "Km", "yA", "Em", "m", "g", "ne", "nX1", "iX1", "te", "tX1") 
+#=======
+EEm <- seq(0, 1, 0.05)
+SGR <- (p[1]*p[3]*EEm-p[5])/(1 + p[6] + EEm*p[4])
+
+ggplot(data.frame(EEm, SGR), aes(EEm, SGR)) + geom_line(lwd = 0.9) + theme_min +
+  ylab(expression(paste("SGR (", day^{-1}, ")"))) + xlab(expression(paste(frac(E, E[m])))) + 
+  ggtitle("A)")
+
+#==================kec/kdna - E/Em relationship
+kec <- (p[7]*EEm*p[4] + p[8])/(1 + EEm*p[4])
+kDNA <- (p[9])/(1 + EEm*p[4])
+
+ggplot(data.frame(EEm, kec, kDNA), aes(x = EEm)) + geom_line(lwd = 0.9, aes(y = kec, color = "kec")) + 
+  geom_line(lwd = 0.9, aes(y = kDNA*5, color = "kDNA")) + theme_min +
+  scale_y_continuous(sec.axis = sec_axis(~./5, 
+                                         name = expression(paste(italic(k[DNA]))))) + 
+  ylab(expression(paste(italic(k[ec])))) + xlab(expression(paste(frac(E, E[m])))) + 
+  ggtitle("B)") + theme(legend.title = element_blank(), legend.text.align = 0, legend.position = c(0.7, 0.6)) + 
+  scale_color_manual(values = c("grey60", "black"), labels = c(expression(italic(k[DNA])), expression(italic(k[ec]))))
