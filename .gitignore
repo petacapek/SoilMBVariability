@@ -41,7 +41,8 @@ rsconnect/
 #Prez obrazky
 /PrezObrazky
 
-#Any pdf, ods, docx or pptx files
+#Any html, pdf, ods, docx or pptx files
+*.html
 *.pdf
 *.pptx
 *.ods
