@@ -1441,149 +1441,6 @@ GFf <- modMCMC(GlobalFit, p = GlobalParmsABC$par,
 summary(GFf)
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~Pitt and Bull 1982~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
-PBData <- read.csv("../SoilMBVariabilityData/Pitt1981.csv")
-#Visualizing the data
-ggplot(PBData, aes(SGR, ATP)) + geom_point(cex = 6, pch = 21, fill = "grey") +
-  theme_min + facet_grid(.~Treatment) + 
-  xlab(expression(paste("Specific growth rate (", h^{-1}, ")"))) +
-  ylab(expression(paste("ATP (", mu, "mol ", g(Biomass)^{-1}, ")")))
-
-##Equation parameters estimation
-###ATP = ne*g*((-SGR - m)/(SGR - v))/(0.25 + g*((-SGR - m)/(SGR - v)))
-PBfun <- function(data){
-  objective<-function(x){
-    return(sum((data$ATP - (x[1]*x[2]*((-data$SGR - x[3])/(data$SGR - x[4]))/(0.25 + x[2]*((-data$SGR - x[3])/(data$SGR - x[4])))))^2))
-  }
-  ###Parameters estimation using MCMC
-  mcmc<-modMCMC(f=objective, p=c(10, 0.1, 1e-5, 0.1), 
-                lower=c(1e-3, 1e-3, 1e-15, 1e-3), 
-                upper=c(1000, 10, 1, 10), niter=100000)
-  ###Improving the estimation using differential evolution algorithm
-  # parDE<-DEoptim(fn=objective, lower=as.numeric(summary(mcmc)["min",]), upper=as.numeric(summary(mcmc)["max",]), 
-  #                    control = c(itermax = 10000, steptol = 50, reltol = 1e-8, trace=FALSE, strategy=3, NP=250))
-  # return(parDE$optim$bestmem)
-  ##or artificial bee colony algorithm
-  parABC<-abc_optim(fn=objective, par=as.numeric(summary(mcmc)["mean",]), 
-                       lb=as.numeric(summary(mcmc)["min",]), 
-                       ub=as.numeric(summary(mcmc)["max",]), maxCycle = 1e6)
-  return(parABC$par)
-}
-
-##Climited conditions
-parClim <- PBfun(subset(PBData, Treatment == "Climited"))
-##Nlimited conditions
-parNlim <- PBfun(subset(PBData, Treatment == "Nlimited"))
-
-##Visualize predictions
-PBpreds <- data.frame(SGR = rep(seq(0, 0.25, 0.01), 2),
-                      Treatment = c(rep("Climited", length(seq(0, 0.25, 0.01))),
-                                    rep("Nlimited", length(seq(0, 0.25, 0.01)))),
-                      ATP = c((parClim[1]*parClim[2]*((-seq(0, 0.25, 0.01) - parClim[3])/(seq(0, 0.25, 0.01) - parClim[4]))/(0.25 + parClim[2]*((-seq(0, 0.25, 0.01) - parClim[3])/(seq(0, 0.25, 0.01) - parClim[4])))),
-                              (parNlim[1]*parNlim[2]*((-seq(0, 0.25, 0.01) - parNlim[3])/(seq(0, 0.25, 0.01) - parNlim[4]))/(0.25 + parNlim[2]*((-seq(0, 0.25, 0.01) - parNlim[3])/(seq(0, 0.25, 0.01) - parNlim[4]))))))
-
-
-ggplot(PBData, aes(SGR, ATP)) + geom_point(cex = 6, pch = 21, fill = "grey") +
-  theme_min + facet_grid(.~Treatment) + 
-  xlab(expression(paste("Specific growth rate (", h^{-1}, ")"))) +
-  ylab(expression(paste("ATP (", mu, "mol ", g(Biomass)^{-1}, ")"))) +
-  geom_line(data = PBpreds, aes(SGR, ATP))
-
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~Chapman and Atkinson~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
-ChData <- read.csv("../SoilMBVariabilityData/Chapman.csv")
-#Visualizing the data
-##Cell mass
-ggplot(ChData, aes(SGR, ATP)) + geom_point(cex = 6, pch = 21, fill = "grey") +
-  theme_min + 
-  xlab(expression(paste("Specific growth rate (", h^{-1}, ")"))) +
-  ylab(expression(paste("ATP (mmol m", g(Protein)^{-1}, ")")))
-
-#==================================================================================================
-##Parameters estimation
-###ATP = z*((-SGR - m)/(SGR - v))/(y + d*((-SGR - m)/(SGR - v)))
-###Coefficients: z, y, d, m, v
-#==================================================================================================
-ChFun <- function(...){
-  objective<-function(x){
-    return(sum((ChData$ATP - x[1]*((-ChData$SGR - x[2])/(ChData$SGR - x[3]))/
-      (x[4] + x[5]*((-ChData$SGR - x[2])/(ChData$SGR - x[3]))))^2))
-  }
-  ###Parameters estimation using MCMC
-  mcmc<-modMCMC(f=objective, p=c(1, 1e-5, 0.1, 1 , 1), 
-                lower=c(1e-3, 1e-15, 1e-3, 1e-3, 1e-3), 
-                upper=c(1e6, 1, 10, 10, 1e3), niter=100000)
-  ###Improving the estimation using differential evolution algorithm
-  # parDE<-DEoptim(fn=objective, lower=as.numeric(summary(mcmc)["min",]), upper=as.numeric(summary(mcmc)["max",]), 
-  #                    control = c(itermax = 10000, steptol = 50, reltol = 1e-8, trace=FALSE, strategy=3, NP=250))
-  # return(parDE$optim$bestmem)
-  ##or artificial bee colony algorithm
-  parABC<-abc_optim(fn=objective, par=as.numeric(summary(mcmc)["mean",]), 
-                    lb=as.numeric(summary(mcmc)["min",]), 
-                    ub=as.numeric(summary(mcmc)["max",]), maxCycle = 1e6)
-  return(parABC$par)
-}
-
-Chpar <- ChFun()
-
-#Visualizing the predictions
-ggplot(ChData, aes(SGR, ATP)) + geom_point(cex = 6, pch = 21, fill = "grey") +
-  theme_min + 
-  xlab(expression(paste("Specific growth rate (", h^{-1}, ")"))) +
-  ylab(expression(paste("ATP (mmol m", g(Protein)^{-1}, ")"))) +
-  stat_function(fun = function(x){
-    Chpar[1]*((-x - Chpar[2])/(x - Chpar[3]))/(Chpar[4] + Chpar[5]*((-x - Chpar[2])/(x - Chpar[3])))
-  })
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~Dourado and Lercher 2020~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
-DLData <- read.csv("../SoilMBVariabilityData/Dourado2020.csv")
-#Visualizing the data
-##RNA relative abundance within the cell
-ggplot(DLData, aes(SGR, RNA)) + geom_point(cex = 6, pch = 21, aes(fill = Species)) +
-  theme_min + scale_fill_manual(values = c("white", "grey")) +
-  xlim(0, 2) + ylim(0, 0.3) + theme(legend.title = element_blank(), legend.position = c(0.8, 0.15)) +
-  xlab(expression(paste("Specific growth rate (", h^{-1}, ")"))) +
-  ylab(expression(paste("RNA abundance (unitless)")))
-
-#==================================================================================================
-##Parameters estimation
-###kRNA = (0.25*rX1 + re*g^((-SGR - m)/(SGR - v)))/(0.25 + g^((-SGR - m)/(SGR - v)))
-###Coefficients: rX1, re, g, m, v
-#==================================================================================================
-DLFun <- function(data){
-  objective<-function(x){
-    return(sum((data$RNA - (0.25*x[1] + x[2]*x[3]^((-data$SGR - x[4])/(data$SGR - x[5])))/(0.25 + x[3]^((-data$SGR - x[4])/(data$SGR - x[5]))))^2, na.rm = T))
-  }
-  ###Parameters estimation using MCMC
-  mcmc<-modMCMC(f=objective, p=c(0.07, 0.24, 0.1, 1e-3 , 0.1), 
-                lower=c(0, 0, 1e-3, 1e-15, 1e-3), 
-                upper=c(1, 1, 10, 1, 1e3), niter=100000)
-  ###Improving the estimation using differential evolution algorithm
-  parDE<-DEoptim(fn=objective, lower=as.numeric(summary(mcmc)["min",]), upper=as.numeric(summary(mcmc)["max",]), 
-                    control = c(itermax = 10000, steptol = 50, reltol = 1e-8, trace=FALSE, strategy=3, NP=250))
-  return(parDE$optim$bestmem)
-  ##or artificial bee colony algorithm
-#   parABC<-abc_optim(fn=objective, par=as.numeric(summary(mcmc)["mean",]), 
-#                     lb=as.numeric(summary(mcmc)["min",]), 
-#                     ub=as.numeric(summary(mcmc)["max",]), maxCycle = 1e6)
-#   return(parABC$par)
-}
-
-DLparEColi <- DLFun(DLData[DLData$Species == "E. Coli", ])
-DLparSC <- DLFun(DLData[DLData$Species != "E. Coli", ])
-
-#Visualizing the predictions
-ggplot(DLData, aes(SGR, RNA)) + geom_point(cex = 6, pch = 21, aes(fill = Species)) +
-  theme_min + scale_fill_manual(values = c("white", "grey")) +
-  xlim(0, 2) + ylim(0, 0.3) + theme(legend.title = element_blank(), legend.position = c(0.8, 0.15)) +
-  xlab(expression(paste("Specific growth rate (", h^{-1}, ")"))) +
-  ylab(expression(paste("RNA abundance (unitless)"))) +
-  stat_function(fun = function(x){(0.25*DLparEColi[1] + DLparEColi[2]*DLparEColi[3]^((-x - DLparEColi[4])/(x - DLparEColi[5])))/(0.25 + DLparEColi[3]^((-x - DLparEColi[4])/(x - DLparEColi[5])))}) +
-  stat_function(fun = function(x){(0.25*DLparSC[1] + DLparSC[2]*DLparSC[3]^((-x - DLparSC[4])/(x - DLparSC[5])))/(0.25 + DLparSC[3]^((-x - DLparSC[4])/(x - DLparSC[5])))})
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~Herbert 1961~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
 HEData <- read.csv("../SoilMBVariabilityData/Herbert1961.csv")
@@ -1611,16 +1468,16 @@ ggplot(HEData, aes(SGR, Protein)) + geom_point(cex = 6, pch = 21, fill = "grey")
 
 #==================================================================================================
 ##Parameters estimation
-###Mass = X1*ce*(0.25 + g*((-SGR - m)/(SGR - v))); X1*ce = z
-###DNA = 0.25*iX1/(0.25 + g*((-SGR - m)/(SGR - v)))
-###RNA = (0.25*rX1 + re*g*((-SGR - m)/(SGR - v)))/(0.25 + g*((-SGR - m)/(SGR - v)))
-###Protein = (0.25*pX1 + pe*g*((-SGR - m)/(SGR - v)))/(0.25 + g*((-SGR - m)/(SGR - v)))
-###Coefficients: z, g, m, v, iX1, rX1, re, pX1, pe
+###Mass = X1*(1 + (SGR + SGR*g + m)/(z - SGR)); z = Im*yA/Em
+###DNA = iX1/(1 + (SGR + SGR*g + m)/(z - SGR))
+###RNA = (rX1 + re*F)/(1 + F); F = (SGR + SGR*g + m)/(z - SGR)
+###Protein = (pX1 + pe*F)/(1 + F); F = (SGR + SGR*g + m)/(z - SGR)
+###Coefficients: X1, z, g, m, iX1, rX1, re, pX1, pe
 #==================================================================================================
 ###Starting with the mass
 HEmass <- function(...){
   objective<-function(x){
-   return(sum((HEData$Mass - x[1]*(0.25 + x[2]*((-HEData$SGR - x[3])/(HEData$SGR - x[4]))))^2))
+   return(sum((HEData$Mass - x[1]*(1 + (HEData$SGR + HEData$SGR*x[2] + x[3])/(x[4] - HEData$SGR)))^2, na.rm = T))
   }
   ###Parameters estimation using MCMC
   mcmc<-modMCMC(f=objective, p=c(1, 0.1, 1e-5, 0.8), 
@@ -1641,7 +1498,7 @@ HEmasspar <- HEmass()
 
 ##Visualize predictions
 HEPreds <- data.frame(SGR = seq(0, max(HEData$SGR), length.out = 50))
-HEPreds$Mass <- with(HEPreds, HEmasspar[1]*(0.25 + HEmasspar[2]*((-SGR - HEmasspar[3])/(SGR - HEmasspar[4]))))
+HEPreds$Mass <- with(HEPreds, HEmasspar[1]*(1 + (SGR + SGR*HEmasspar[2] + HEmasspar[3])/(HEmasspar[4] - SGR)))
 
 ##Cell mass
 ggplot(HEData, aes(SGR, Mass)) + geom_point(cex = 6, pch = 21, fill = "grey") +
@@ -1653,11 +1510,11 @@ ggplot(HEData, aes(SGR, Mass)) + geom_point(cex = 6, pch = 21, fill = "grey") +
 #===========
 # DNA
 #===========
-nlsDNA<-nls(DNA~0.25*iX1/(0.25 + HEmasspar[2]*((-SGR - HEmasspar[3])/(SGR - HEmasspar[4]))),
+nlsDNA<-nls(DNA~iX1/(1 + (SGR + SGR*HEmasspar[2] + HEmasspar[3])/(HEmasspar[4] - SGR)),
             HEData, start = list(iX1 = 0.005))
 summary(nlsDNA)
 ##Visualize predictions
-HEPreds$DNA <- with(HEPreds, 0.25*coef(nlsDNA)/(0.25 + HEmasspar[2]*((-SGR - HEmasspar[3])/(SGR - HEmasspar[4]))))
+HEPreds$DNA <- with(HEPreds, coef(nlsDNA)/(1 + (SGR + SGR*HEmasspar[2] + HEmasspar[3])/(HEmasspar[4] - SGR)))
 
 ##DNA
 ggplot(HEData, aes(SGR, DNA)) + geom_point(cex = 6, pch = 21, fill = "grey") +
@@ -1666,32 +1523,16 @@ ggplot(HEData, aes(SGR, DNA)) + geom_point(cex = 6, pch = 21, fill = "grey") +
   ylab(expression(paste("DNA abundance (unitless)"))) + 
   geom_line(data = HEPreds, aes(SGR, DNA), lwd = 1.5) 
 
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-##Compare to Marstorp and Witter study
-SGRMAX = (HEmasspar[4] - HEmasspar[3]*HEmasspar[2])/(1 + HEmasspar[2]) 
-HEData$SGRrel <- HEData$SGR/SGRMAX
-HEPreds$SGRrel <- HEPreds$SGR/SGRMAX
-
-ggplot(HEData, aes(SGRrel, DNA)) + geom_point(cex = 6, pch = 21, fill = "grey") +
-  theme_min + 
-  xlab(expression(paste(frac(mu,mu[MAX])))) +
-  ylab(expression(paste("DNA abundance (unitless)"))) + 
-  geom_line(data = HEPreds, aes(SGRrel, DNA), lwd = 1.5) +
-  geom_line(data = subset(ConversionsPredsL1, variable == "kDNA"),
-              aes(muRel, value), colour = "grey", lwd = 1.5)
-
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
 #===========
 # RNA
 #===========
-nlsRNA<-nls(RNA~(0.25*rX1 + re*HEmasspar[2]*((-SGR - HEmasspar[3])/(SGR - HEmasspar[4])))/
-              (0.25 + HEmasspar[2]*((-SGR - HEmasspar[3])/(SGR - HEmasspar[4]))),
+nlsRNA<-nls(RNA~(rX1 + re*(SGR + SGR*HEmasspar[2] + HEmasspar[3])/(HEmasspar[4] - SGR))/
+              (1 +  (SGR + SGR*HEmasspar[2] + HEmasspar[3])/(HEmasspar[4] - SGR)),
             HEData, start = list(rX1 = 0.1, re = 0.4))
 summary(nlsRNA)
 ##Visualize predictions
-HEPreds$RNA <- with(HEPreds, (0.25*coef(nlsRNA)[1] + coef(nlsRNA)[2]*HEmasspar[2]*((-SGR - HEmasspar[3])/(SGR - HEmasspar[4])))/
-                      (0.25 + HEmasspar[2]*((-SGR - HEmasspar[3])/(SGR - HEmasspar[4]))))
+HEPreds$RNA <- with(HEPreds, (coef(nlsRNA)[1] + coef(nlsRNA)[2]*(SGR + SGR*HEmasspar[2] + HEmasspar[3])/(HEmasspar[4] - SGR))/
+                      (1 +  (SGR + SGR*HEmasspar[2] + HEmasspar[3])/(HEmasspar[4] - SGR)))
 
 ##RNA
 ggplot(HEData, aes(SGR, RNA)) + geom_point(cex = 6, pch = 21, fill = "grey") +
@@ -1703,13 +1544,13 @@ ggplot(HEData, aes(SGR, RNA)) + geom_point(cex = 6, pch = 21, fill = "grey") +
 #===========
 # Proteins
 #===========
-nlsP<-nls(Protein~(0.25*pX1 + pe*HEmasspar[2]*((-SGR - HEmasspar[3])/(SGR - HEmasspar[4])))/
-              (0.25 + HEmasspar[2]*((-SGR - HEmasspar[3])/(SGR - HEmasspar[4]))),
+nlsP<-nls(Protein~(pX1 + pe*(SGR + SGR*HEmasspar[2] + HEmasspar[3])/(HEmasspar[4] - SGR))/
+            (1 +  (SGR + SGR*HEmasspar[2] + HEmasspar[3])/(HEmasspar[4] - SGR)),
             HEData, start = list(pX1 = 0.8, pe = 0.1))
 summary(nlsP)
 ##Visualize predictions
-HEPreds$Protein <- with(HEPreds, (0.25*coef(nlsP)[1] + coef(nlsP)[2]*HEmasspar[2]*((-SGR - HEmasspar[3])/(SGR - HEmasspar[4])))/
-                      (0.25 + HEmasspar[2]*((-SGR - HEmasspar[3])/(SGR - HEmasspar[4]))))
+HEPreds$Protein <- with(HEPreds, (coef(nlsP)[1] + coef(nlsP)[2]*(SGR + SGR*HEmasspar[2] + HEmasspar[3])/(HEmasspar[4] - SGR))/
+                          (1 +  (SGR + SGR*HEmasspar[2] + HEmasspar[3])/(HEmasspar[4] - SGR)))
 
 ##Protein
 ggplot(HEData, aes(SGR, Protein)) + geom_point(cex = 6, pch = 21, fill = "grey") +
@@ -1717,20 +1558,6 @@ ggplot(HEData, aes(SGR, Protein)) + geom_point(cex = 6, pch = 21, fill = "grey")
   xlab(expression(paste("Specific growth rate (", h^{-1}, ")"))) +
   ylab(expression(paste("Proteins abundance (unitless)"))) + 
   geom_line(data = HEPreds, aes(SGR, Protein), lwd = 1.5)
-
-#=====================
-# Study, Treatment, yA, Km, v, m, g, ce, nX1, 
-# iX1, ne, rX1, re, pX1, pe, lX1, le
-parsAll <- rbind(parsAll, data.frame(Study = c("Herbert (1961)"),
-                                     Treatment = c("Glucose"),
-                                     yA = c(NA),  Km = c(NA), 
-                                     v = c(HEmasspar[4]*24), m = c(HEmasspar[3]*24),  
-                                     g = c(HEmasspar[2]), ce = c(NA),  
-                                     nX1 = c(NA),
-                                     iX1 = c(coef(nlsDNA)),  tX1 = c(NA), te = c(NA), rX1 = c(coef(nlsRNA)[1]),
-                                     re = c(coef(nlsRNA)[2]),  pX1 = c(coef(nlsP)[1]), pe = c(coef(nlsP)[2]),
-                                     lX1 = c(NA), le = c(NA)))
-
 
 #==================Growth rate - E/Em relationship
 #Parameters
