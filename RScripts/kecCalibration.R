@@ -1559,6 +1559,25 @@ ggplot(HEData, aes(SGR, Protein)) + geom_point(cex = 6, pch = 21, fill = "grey")
   ylab(expression(paste("Proteins abundance (unitless)"))) + 
   geom_line(data = HEPreds, aes(SGR, Protein), lwd = 1.5)
 
+#=================
+# All in one graph
+#=================
+ggplot(HEData, aes(x = SGR)) + geom_point(cex = 6, pch = 21, aes(y = Mass, fill = "Cell mass")) +
+  geom_point(cex = 6, pch = 21, aes(y = RNA*5, fill = "RNA")) + theme_min +
+  geom_point(cex = 6, pch = 21, aes(y = Protein, fill = "Proteins")) +
+  geom_point(cex = 6, pch = 21, aes(y = DNA*5, fill = "DNA")) +
+  scale_y_continuous(sec.axis = sec_axis(~./5, name = "RNA and DNA abundance")) +
+  labs(y = "Cell Mass (mg) and abundance of Proteins",
+       x = expression(paste("Specific growth rate (", h^{-1}, ")"))) +
+  scale_fill_manual(values = c("grey60", "black", "white", "grey90")) + 
+  xlim(0, 1) + theme(legend.title = element_blank(), legend.position = c(0.2, 0.85), 
+                     legend.background = element_blank()) +
+  geom_line(data = HEPreds, aes(SGR, Mass), lwd = 1, color = "grey60") +
+  geom_line(data = HEPreds, aes(SGR, DNA*5), lwd = 1, color = "black") +
+  geom_line(data = HEPreds, aes(SGR, RNA*5), lwd = 1, color = "grey") +
+  geom_line(data = HEPreds, aes(SGR, Protein), lwd = 1, color = "black") +
+  ggtitle("A)")
+
 #==================Growth rate - E/Em relationship
 #Parameters
 p <- GlobalParmsABC$par
@@ -1582,3 +1601,40 @@ ggplot(data.frame(EEm, kec, kDNA), aes(x = EEm)) + geom_line(lwd = 0.9, aes(y = 
   ylab(expression(paste(italic(k[ec])))) + xlab(expression(paste(frac(E, E[m])))) + 
   ggtitle("B)") + theme(legend.title = element_blank(), legend.text.align = 0, legend.position = c(0.7, 0.6)) + 
   scale_color_manual(values = c("grey60", "black"), labels = c(expression(italic(k[DNA])), expression(italic(k[ec]))))
+
+#==================kec - E/Em theoretical relationship
+##Six different combinations of nX1 and ne
+kecT <- data.frame(EEm = rep(seq(0, 1, 0.05), 6),
+                   Legend = rep(c("n[G]==0.8~,~n[B]==0.3", 
+                              "n[G]==0.8~,~n[B]==0.1",
+                              "n[G]==0.6~,~n[B]==0.3", 
+                              "n[G]==0.6~,~n[B]==0.1",
+                              "n[G]==0.4~,~n[B]==0.3", 
+                              "n[G]==0.4~,~n[B]==0.1"), each = length(seq(0, 1, 0.05))),
+                   kec = c((0.8*seq(0, 1, 0.05)*p[4] + 0.3)/(1 + seq(0, 1, 0.05)*p[4]),
+                           (0.8*seq(0, 1, 0.05)*p[4] + 0.1)/(1 + seq(0, 1, 0.05)*p[4]),
+                           (0.6*seq(0, 1, 0.05)*p[4] + 0.3)/(1 + seq(0, 1, 0.05)*p[4]),
+                           (0.6*seq(0, 1, 0.05)*p[4] + 0.1)/(1 + seq(0, 1, 0.05)*p[4]),
+                           (0.4*seq(0, 1, 0.05)*p[4] + 0.3)/(1 + seq(0, 1, 0.05)*p[4]),
+                           (0.4*seq(0, 1, 0.05)*p[4] + 0.1)/(1 + seq(0, 1, 0.05)*p[4])))
+
+ggplot(kecT, aes(EEm, kec)) + geom_line(aes(color = Legend, linetype = Legend)) +
+  theme_min + scale_color_manual(values = c("black", "black", "grey", "grey", "grey60", "grey60"),
+                                 labels = c(expression(n[G]==0.8~~n[B]==0.3), 
+                                            expression(n[G]==0.8~~n[B]==0.1),
+                                            expression(n[G]==0.6~~n[B]==0.3), 
+                                            expression(n[G]==0.6~~n[B]==0.1),
+                                            expression(n[G]==0.4~~n[B]==0.3), 
+                                            expression(n[G]==0.4~~n[B]==0.1)))+
+  scale_linetype_manual(values = c("solid", "dashed", "solid", "dashed", "solid", "dashed"),
+                     labels = c(expression(n[G]==0.8~~n[B]==0.3), 
+                                expression(n[G]==0.8~~n[B]==0.1),
+                                expression(n[G]==0.6~~n[B]==0.3), 
+                                expression(n[G]==0.6~~n[B]==0.1),
+                                expression(n[G]==0.4~~n[B]==0.3), 
+                                expression(n[G]==0.4~~n[B]==0.1))) +
+  xlab(expression(paste(frac(G, G[m])))) + ylab(expression(paste(italic(k[ec])))) +
+  scale_y_continuous(limits = c(0.1, 0.65), breaks = c(0.1, 0.2, 0.3, 0.4, 0.5, 0.6)) +
+  geom_hline(yintercept = 0.45, color = "red") + theme(legend.title = element_blank()) +
+  ggtitle("C)")
+  
