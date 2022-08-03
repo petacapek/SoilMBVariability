@@ -26,13 +26,15 @@ The aim of this study is to define the relationship between the macromolecular c
 
 ### 2.1. Theory
 
-Here we use a theory and mathematical description inspired by the Dynamic Energy Budget theory [@Hanegraaf2001; @kooijman1991; @Kooijman2009]. The mathematical formulation is, however, defined directly on per C-1 molar basis to avoid excessive number of conversion factors, and the terminology common to soil microbial studies is used. For simplicity, we assume that the microbial community is composed of heterotrophic microorganisms, volume and shape of all microbial cells do change over time and it is similar across soils, the aerobic conditions dominate in all microenvironments, the catabolic reactions within the cell degrades organic substrate completely to $CO_{2}$ (i.e. release of fermentation products to soil is negligible), and the extracellular enzymes production is negligible.
+#### 2.1.1. Mathematical model
 
-The model is schematically shown on Fig. 1C (see also Tab. 1 for list of symbols and their explanation) and recognizes four different carbon pools - organic substrate ($S$) that the microbial biomass feeds on, $B$, $G$, and $CO_{2}$ as a product of catabolism. Total microbial biomass ($MB$) is a sum of $B$ and $B \times G$ because $G$ is located inside the cell. $S$ is consumed by the rate proportional to $B$ (i.e. $G$ has no effect). The uptake rate ($U$) is defined as:
+Here we present a theoretical background and formulation of a mathematical model, which is inspired by the Dynamic Energy Budget theory [@Hanegraaf2001; @kooijman1991; @Kooijman2009] and is used to explain variability in macromolecular composition of soil microbial biomass. The mathematical formulation is, however, defined directly on per C-1 molar basis to avoid excessive number of conversion factors, and the terminology common to soil microbial studies is used. For simplicity, we assume that the microbial community is composed of heterotrophic microorganisms, volume and shape of all microbial cells do not change over time and it is similar across soils, the aerobic conditions dominate in all microenvironments, the catabolic reactions within the cell degrades organic substrate completely to $CO_{2}$ (i.e. release of fermentation products to soil is negligible), and the extracellular enzymes production is negligible.
+
+The model is schematically shown on Fig. 1C (see also Tab. 1 for list of symbols and their explanation) and recognizes four different carbon pools - organic substrate ($S$), $B$, $G$, and $CO_{2}$. Total microbial biomass ($MB$) is a sum of $B$ and $B \times G$ because $G$ is scaled to $B$ (i.e. growth intermediates are located inside the cell). $S$ is the entire source of energy and C for microbial biomass. Its uptake rate ($U$) is proportional to $B$ (i.e. $G$ has no effect) and follows classical hyperbolic scaling with $S$:
 
 $U = I_m \times B \times f;~~~f = \frac{S}{K_m + S}.$ (1)
 
-In eq. 1, $I_m$ is maximum uptake rate of a substrate and $K_M$ is half-saturation constant. Because $S$ is converted to $G$ during assimilation, there must be overhead energy costs resulting in production of $CO_{2}$ (Fig. 1C, assimilatory respiration). It is assumed that these costs are covered directly from $S$. Substrate assimilation ($A$) and assimilatory respiration ($R_{assimilatory}$) rates are respectively defined as:
+In eq. 1, $I_m$ is maximum uptake rate of a substrate and $K_M$ is half-saturation constant. $S$ taken up gets assimilated, i.e. converted to $G$. There are overhead energy costs of assimilation resulting in production of $CO_{2}$ (Fig. 1C, assimilatory respiration). It is assumed that these costs are covered directly from $S$. Substrate assimilation ($A$) and assimilatory respiration ($R_{assimilatory}$) rates are respectively defined as:
 
 $A = U \times y_A,$ (2)
 
@@ -44,32 +46,46 @@ In eqs. 2 and 3, $y_A$ defines the efficiency of substrate conversion into $G$. 
 
 $J = A_m \times \frac{G}{G_M}.$ (4)
 
-In eq. 4, $A_m$ is biomass specific maximum assimilation rate constant, which is equal to $I_m \times y_A$. $G_m$ is maximum content of $G$ that the cell can have. Thus, the more substrate the cell assimilates, the faster the $G$ can be mobilized. $G$ content cannot exceed $G_m$, so $\frac{G}{G_m}$ is always a number between 0 and 1. When $\frac{G}{G_m}$ is 1, $J$ reaches the maximum under the given environmental conditions.
+In eq. 4, $A_m$ is specific maximum assimilation rate constant, which is equal to $I_m \times y_A$. $G_m$ is maximum content of $G$ that the cell can have. Thus, the more substrate the cell assimilates into growth intermediates, the faster the $G$ can be mobilized. $G$ content cannot exceed $G_m$, so $\frac{G}{G_m}$ is always a number between 0 and 1. When $\frac{G}{G_m}$ is 1, $J$ reaches the maximum under the given environmental conditions.
 
-At any time, microbial cell has to maintain its integrity. Cellular integrity maintenance requires energy. It is thus associated with $CO_{2}$ production (Fig. 1C, maintenance respiration). The maintenance respiration ($R_{maintenance}$) is proportional only to $B$ because $G$ requires no maintenance:
+At any time, microbial cell has to maintain integrity of its basal cellular material $B$, $G$ requires no maintenance. Cellular integrity maintenance is associated with $CO_{2}$ production because it requires energy (Fig. 1C, maintenance respiration). The maintenance respiration ($R_{maintenance}$) is defined as:
 
 $R_{maintenance} = m \times B.$ (5)
 
 In eq. 5, $m$ is the specific maintenance rate coefficient.
 
-If the amount of $G$ is sufficient (see below), microbial biomass can grow. Growth is simply defined as $\frac{dB}{dt}$ (change of $B$ over time). Because the growth is defined as a conversion of $G$ to $B$, it is also associated with energy costs (Fig. 1C, growth respiration), which are assumed to be constant. Growth respiration ($R_{growth}$) is defined by eq. 6:
+If the amount of $G$ is sufficiently high (see the details below), microbial biomass can grow. Growth is simply defined as a change of $B$ over time ($\frac{dB}{dt}$). Because the growth is defined as a conversion of $G$ to $B$, it is associated with energy costs (Fig. 1C, growth respiration) and thus, growth respiration ($R_{growth}$) defined by eq. 6:
 
 $R_{growth} = g \times \frac{dB}{dt},$ (6)
 
-in which $g$ defines the biomass specific energy cost of growth.
+in which $g$ defines the energy cost of growth in terms of amount of $CO_{2}$ produced per unit of produced $B$.
 
-At any time, maintenance of cellular integrity has an absolute priority over growth. Thus, growth is realized only if $J$ is higher than $m$. Fluxes $R_{maintenance}$, $R_{growth}$ and $\frac{dB}{dt}$ must sum up to give a change of $G$ over time:
+Maintenance of cellular integrity has an absolute priority over growth. Thus, growth is realized only if $J$ is higher than $m$. Fluxes $R_{maintenance}$, $R_{growth}$ and $\frac{dB}{dt}$ balance change of $G$ over time:
 
-$m \times B + g \times \frac{dB}{dt} + \frac{dB}{dt} = -\frac{dG}{dt} \times B - \frac{dB}{dt} \times G.$ (7)
+$\underbrace{m \times B}_{R_{maintenance}} + \underbrace{g \times \frac{dB}{dt}}_{R_{growth}} + \underbrace{\frac{dB}{dt}}_{growth} = \underbrace{J \times B}_{G~mobilization~rate~within~cells}  - \underbrace{\frac{dB}{dt} \times G}_{dilution~of~G~by~growth}.$ (7)
 
-The first term on right hand side of the eq. 7 ($-\frac{dG}{dt} \times B$) defines the flux $J \times B$ so it is equal to $A_m \times \frac{G}{G_M} \times B$. The second term defines the dilution of pool $G$ by the growth (i.e. increase of pool $B$ to which it is scaled). Eq. 7 is written so that it can be solved in respect to $\frac{dB}{dt}$ to give an equation 8:
+The second term on the right hand side of eq. 7 defines the dilution of pool $G$ by the growth. Because $G$ is scaled to $B$, an increase of pool $B$ decreases $G$. Without that term, the mass balance would be violated. Eq. 7 can be rearranged to find a formulation of $\frac{dB}{dt}$, which is defined by the equation 8
 
-$\frac{dB}{dt} = \mu \times B;~~\mu = \frac{J-m}{1+g+G},$ (8)
+$\frac{dB}{dt} = \mu \times B;~~\mu = \frac{J-m}{1+g+G}.$ (8)
 
-which defines the specific growth rate ($\mu$) as a function of $J$, $m$, $g$ and $G$, which are all scaled to pool $B$ (i.e. biomass specific). As defined earlier, $\mu$ is positive when the amount of $G$ is high enough to produce flux $J$ exceeding $m$. In opposite case, $\mu$ is negative so the maintenance costs must be covered from $B$ instead of $G$. Eq. 8 is thus accurate at growing conditions. At non-growing conditions, eq. 8 becomes:
+Eq. 8 shows that the specific growth rate ($\mu$) as a function of $J$, $m$, $g$ and $G$ - a variables, which are all scaled to pool $B$ (i.e. biomass specific). It also shows that $\mu$ is positive when the amount of $G$ is high enough to produce flux $J$ exceeding $m$. In opposite case, $\mu$ becomes negative. If $G$ is so small that it cannot cover the maintenance costs, these costs must be covered from $B$. The eq. 8, however, must be rearranged to:
 
 $\frac{dB}{dt} = \mu \times B \times (1+g).$ (9)
 
-This formulation aligns well with the empirical observations. In nature, the microbial cells may temporarily maintain its basal metabolism to survive the starvation period when growth ceases. During this time, the cell shrinks (and/or changes shape) because all maintenance C costs are met from the pool of basal cellular material (i.e. depolymerized cellular structures, @mason1993). The period of basal metabolism maintenance can last up to several months in some cases [@morita1993].
+because $\mu$ simplifies to $m$ when $G$ is zero and the eq. 9 becomes equivalent to eq. 5. This formulation aligns well with the empirical observations. In nature, the microbial cells may temporarily maintain its basal metabolism to survive the starvation period when growth ceases. During this time, the cell shrinks (and/or changes shape) because all maintenance C costs are met from the pool of basal cellular material (i.e. depolymerized cellular structures, @mason1993). The period of basal metabolism maintenance can last up to several months in some cases [@morita1993].
+
+To summarize the theoretical background, the mathematical model depicted on Fig. 1C is described by four differential equations defined respectively for pools $S$, $G$, $B$, and $CO_2$ as follows:
+
+$\frac{dS}{dt} = -U,$ (10)
+
+$\frac{dG}{dt} = A_m \times (f-\frac{G}{G_m}),$ (11)
+
+$\frac{dB}{dt} = \left\{ \begin{array}{rcl}\mu \times B & \mbox{for}& \mu \geq 0 \\\ \mu \times B \times (1+g) & \mbox{for} & \mu < 0\end{array}\right.,$ (12)
+
+$\frac{dCO_2}{dt} = R_{assimilatory} + R_{maintenance}+min(R_{growth}, 0).$ (13)
+
+The last term of eq. 13 ($min(R_{growth}, 0)$) means that the growth respiration occurs only when growth is realized ($\mu$ is positive).
+
+#### 2.1.2. Conversion factors
 
 ## References:
