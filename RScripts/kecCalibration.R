@@ -1605,12 +1605,7 @@ ggplot(data.frame(EEm, kec, kDNA), aes(x = EEm)) + geom_line(lwd = 0.9, aes(y = 
 #==================kec - E/Em theoretical relationship
 ##Six different combinations of nX1 and ne
 kecT <- data.frame(EEm = rep(seq(0, 1, 0.05), 6),
-                   Legend = rep(c("n[G]==0.8~,~n[B]==0.3", 
-                              "n[G]==0.8~,~n[B]==0.1",
-                              "n[G]==0.6~,~n[B]==0.3", 
-                              "n[G]==0.6~,~n[B]==0.1",
-                              "n[G]==0.4~,~n[B]==0.3", 
-                              "n[G]==0.4~,~n[B]==0.1"), each = length(seq(0, 1, 0.05))),
+                   Legend = rep(c("A", "B", "C", "D", "E", "F"), each = length(seq(0, 1, 0.05))),
                    kec = c((0.8*seq(0, 1, 0.05)*p[4] + 0.3)/(1 + seq(0, 1, 0.05)*p[4]),
                            (0.8*seq(0, 1, 0.05)*p[4] + 0.1)/(1 + seq(0, 1, 0.05)*p[4]),
                            (0.6*seq(0, 1, 0.05)*p[4] + 0.3)/(1 + seq(0, 1, 0.05)*p[4]),
