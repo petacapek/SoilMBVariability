@@ -4,6 +4,8 @@ author: "Petr Čapek, Michal Choma, Eva Kaštovská, Karolina Tahovská, Helen G
 date: "`r Sys.Date()`"
 output: word_document
 bibliography: references.bib
+editor_options:
+  chunk_output_type: console
 ---
 
 ```{r setup, include=FALSE}
@@ -112,7 +114,7 @@ To test the accuracy of the theoretical background, the model defined above was 
 
 Data were extracted from publications either directly or using the WebPlotDigitizer. When some data points were overlapping in graphs, they were not extracted. All extracted data were recalculated to $\mu$mol of carbon per gram of oven dried soil applying conversion factors reported in @Vrede2004. When total microbial biomass was reported, the respective biomass proxy that was directly measured was calculated using a conversion factor reported in the study (i.e. typically 0.45 for $k_{ec}$ factor). The data are available at <https://github.com/petacapek/SoilMBVariability>.
 
-### 2.3. Model calibration and statistical analyses 
+### 2.3. Model calibration and statistical analyses
 
 The model was first calibrated against the data reported in individual studies to asses its ability to explain the temporal variability in different C pools and $k_{ec}$ factor following substrate addition. Model parameters were adjusted to minimize the objective function $J$ using the Artificial Bee Colony algorithm [@vegayon2017] within a predefined range of parameters' values (Tab. SX). The objective function $J$ was defined for each measured variable as:
 
@@ -125,5 +127,47 @@ We further evaluated if the goodness of model fit is significantly better than t
 To further asses generalizability of the theoretical background, model calibration was performed across all studies and the goodness of model fit was analyzed. To minimize number of model parameters, study of @ziegler2005 was excluded from the analysis. Thus, only the conversion factors between total soil microbial biomass, CFC, DNA, and ATP were estimated. Due to the low temporal resolution, studies of @sparling1988 and @Sparling1990a (see above) were also excluded. Because the studies supplying isotopically labelled and unlabelled organic substrate were analyzed together, certain offset in model predictions must appear independently of theoretical background validity (see the discussion section).
 
 To perform calibration of model parameters, initial conditions must be defined. This is not always possible when total soil biomass is composed of two pools whose content is apriori unknown. In studies that report temporal dynamic of two microbial proxies, the initial pools $B$ and $G$ were calculated as a product of conversion factors between total soil microbial biomass and reported proxies, and the initial concentration of the proxies. In other studies, $G$ was assumed to be initially equal to $\frac{m \times G_{m}}{I_m \times y_A}$ so the $G$ is large enough to only cover maintenance costs. When the model was calibrated against data from all studies combined, we simply assumed that initial $G$ is close to zero.
+
+## Tables
+
+**Table 1:** List of symbols used in mathematical model formulation. Explanation and units are reported to each symbol. Parameters marked by symbol '*' are subjected to calibration (see section 2.3. Model calibration and statistical analyses for details).
+
+| **Symbol**       | **Explanation**                                | **Unit**                               |
+|:----------------:|:----------------------------------------------:|:--------------------------------------:|
+| **Pools**                                                                                                |||
+|S                 |Organic substrate                               | $\mu mol(C)~g(DW)^{-1}$                |
+|B                 |Basal biomass                                   | $\mu mol(C)~g(DW)^{-1}$                |
+|G                 |Growth intermediates                            | $\mu mol(C)~\mu mol(C~of~pool~B)^{-1}$ |
+|$CO_2$            |Carbon dioxide                                  | $\mu mol(C)~g(DW)^{-1}$                |
+|MB                |Total microbial biomass ($MB=(B+B \times G)$)   | $\mu mol(C)~g(DW)^{-1}$                |
+| **Fluxes**                                                                                               |||
+|U                 |Organic substrate uptake rate (eq. 1)           | $\mu mol(C)~g(DW)^{-1}~day^{-1}$       |
+|A                 |Rate of organic substrate assimilation into G (eq. 1)| $\mu mol(C)~g(DW)^{-1}~day^{-1}$  |
+|$R_{assimilatory}$|Assimilatory respiration (eq. 3)                | $\mu mol(C)~g(DW)^{-1}~day^{-1}$       |
+|J                 |Mobilization rate of G (eq. 4)     |      $\mu mol(C)~\mu mol(C~of~pool~B)^{-1} day^{-1}$|
+|$R_{maintenance}$ |Maintenance respiration (eq. 5)                 | $\mu mol(C)~g(DW)^{-1}~day^{-1}$       |
+|$R_{growth}$      |Growth respiration (eq. 5)                      | $\mu mol(C)~g(DW)^{-1}~day^{-1}$       |
+|$\mu$             |Specific growth rate (eq. 6)           |  $\mu mol(C)~\mu mol(C~of~pool~B)^{-1} day^{-1}$|
+| **Parameters**                                                                                           |||
+|$I_m$             |Maximum uptake rate                    |  $\mu mol(C)~\mu mol(C~of~pool~B)^{-1} day^{-1}$|
+|$K_m$*            |Half-saturation constant                        | $\mu mol(C)~g(DW)^{-1}$                |
+|$y_A$*            |Assimilation efficiency                         |unitless                                |
+|$A_m$        |Maximum assimilation rate ($I_m \times y_A$)|  $\mu mol(C)~\mu mol(C~of~pool~B)^{-1} day^{-1}$|
+|$G_m$*       |Maximum amount of G within B                         |  $\mu mol(C)~\mu mol(C~of~pool~B)^{-1}$|
+|m*           |Specific maintenance rate coefficient       |  $\mu mol(C)~\mu mol(C~of~pool~B)^{-1} day^{-1}$|
+|g*           |Growth costs                                         |  $\mu mol(C)~\mu mol(C~of~pool~B)^{-1}$|
+|$n_G$*            |Relative amount of G extracted from soil after chloroform fumigation  |unitless          |
+|$n_B$*            |Relative amount of B extracted from soil after chloroform fumigation  |unitless          |
+|$i_B$*            |Relative amount of DNA in pool B                |unitless                                |
+|$t_G$*            |Relative amount of ATP in pool G                |unitless                                |
+|$t_B$*            |Relative amount of ATP in pool B                |unitless                                |
+|$p_G$*            |Relative amount of PLFA in pool G               |unitless                                |
+|$p_B$*            |Relative amount of PLFA in pool B               |unitless                                |
+
+## Figures
+
+```{r Figure1, out.height = "700px", out.width='800px', echo=F, message=FALSE, fig.cap="**Figure 1:** **A)** Relationship between the specific growth rate of Aerobacter aerogenes population, its cell mass (dark grey circles) and three different cell components - proteins (empty cirles), RNA (light grey circles), and DNA (black circles). Data were redrawn from Herbert (1961). Lines represent fit of the model described in section 2.1.1. Mathematical model. Model parameters that were used to draw the predictions are reported in Tab. S1. **B)** Relationship between the amount of growth intermediates scaled to the maximum that microbial cell can have $$(\\frac{G}{G_m})$$ and the $$k_{ec}$$ factor (i.e. chloroform labile part of microbial biomass) depending on the value of parameters $$n_G$$ and $$n_B$$ representing respectively the relative amount of basal microbial biomass and growth intermediates extrated from soil after chloroform fumigation (see Tab. 1 and section 2.1.1. Mathematical model for detail explanation). **C)** Schematic representation of mathematical model described in section 2.1.1. Mathematical model. Different boxes represent different carbon pools. Arrows represent different carbon fluxes. "}
+knitr::include_graphics("../Manuscript/Theoretical.pdf")
+```
 
 ## References:
