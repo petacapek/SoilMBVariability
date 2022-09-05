@@ -105,12 +105,16 @@ ParmsGlanvilleGlucose <- abc_optim(fn = GlObjectiveGlucose,
                                    lb = as.numeric(summary(GlP1)[c("min"), ]), 
                                    ub = as.numeric(summary(GlP1)[c("max"), ]))
 ParmsGlanvilleGlucose$par
+##Uncertainty
+GlPsd <- modMCMC(GlObjectiveGlucose, p = ParmsGlanvilleGlucose$par, lower = Parms[1:8, 2], 
+                 upper = Parms[1:8, 3], niter = 5000)
+summary(GlPsd)
 #==================================================#
 #Goodness of fit and simulations
 source("IndividualStudies/GlFitGlucose.R")
 SimGlanvilleGlucose <- GlFitGlucose(ParmsGlanvilleGlucose$par)
 SimGlanvilleGlucose$errors
-
+SimGlanvilleGlucose$R2all
 #=====================Alanin
 #Objective function
 source("IndividualStudies/GlObjectiveAla.R")
@@ -124,18 +128,23 @@ ParmsGlanvilleAla <- abc_optim(fn = GlObjectiveAla,
                                lb = as.numeric(summary(GlP2)[c("min"), ]), 
                                ub = as.numeric(summary(GlP2)[c("max"), ]))
 ParmsGlanvilleAla$par
+##Uncertainty
+GlPsd2 <- modMCMC(GlObjectiveAla, p = ParmsGlanvilleAla$par, lower = Parms[1:8, 2], 
+                 upper = Parms[1:8, 3], niter = 5000)
+summary(GlPsd2)
 #==================================================#
 #Goodness of fit and simulations
 source("IndividualStudies/GlFitAla.R")
 SimGlanvilleAla <- GlFitAla(ParmsGlanvilleAla$par)
 SimGlanvilleAla$errors
-
+SimGlanvilleAla$R2all
 #=====================Visualizing the data with simulations
 Gluc <- SimGlanvilleGlucose$Simulation
 Gluc$Substrate <- "Glucose"
 Ala <- SimGlanvilleAla$Simulation
 Ala$Substrate <- "Alanin"
 SimGlanville <- rbind(Gluc, Ala)
+write.csv(SimGlanville, "../Manuscript/figure_data/SimGlanville.csv", row.names = F)
 
 ##kec
 ggplot(GlData, aes(Time, kec)) + geom_point(cex=6, pch=21, aes(fill = Substrate)) +
@@ -224,17 +233,21 @@ ParmsSparling90 <- abc_optim(fn = SpObjective,
                              ub = as.numeric(summary(SpP)[c("max"), ]))
 
 ParmsSparling90$par
-#ParmsSparling90DE$optim$bestmem
+#Uncertainty
+SpPu <- modMCMC(SpObjective, p = ParmsSparling90$par, lower = Parms[1:8, 2], upper = Parms[1:8, 3], niter = 5000)
+summary(SpPu)
 #==================================================#
 #Goodness of fit and simulations
 source("IndividualStudies/SpFit.R")
 SimSparling90 <- SpFit(ParmsSparling90$par)
 SimSparling90$errors
+SimSparling90$R2all
 #=====================Visualizing the data with simulations
 SparlingSim <- as.data.frame(SimSparling90$Simulation)
 SparlingSimY <- melt(SparlingSim[, 1:4])
 colnames(SparlingSimY) <- c("Variable", "Measured")
 SparlingSimY$Predicted <- melt(SparlingSim[, 5:8])[, 2]
+write.csv(SparlingSimY, "../Manuscript/figure_data/SimSparling.csv", row.names = F)
 
 ggplot(SparlingSimY, aes(Measured, Predicted)) + geom_point(cex = 6, pch = 21, fill = "grey") +
   theme_min + facet_wrap(~Variable, scales = "free") +

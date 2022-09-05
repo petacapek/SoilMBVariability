@@ -30,9 +30,9 @@ The aim of this study is to define the relationship between the macromolecular c
 
 #### 2.1.1. Mathematical model
 
-Here we present a theoretical background and formulation of a mathematical model, which is inspired by the Dynamic Energy Budget theory [@Hanegraaf2001; @kooijman1991; @Kooijman2009], and is used to explain variability in macromolecular composition of soil microbial biomass. As compared to Dynamic Energy Budget theory, the mathematical formulation is defined directly on C-1 molar basis to avoid excessive number of conversion factors, and the terminology common to soil microbial studies is used. For simplicity, we assume that the microbial community is composed of heterotrophic microorganisms, volume and shape of all microbial cells do not change over time and it is similar across soils, the aerobic conditions dominate in all microenvironments, the catabolic reactions within the cell degrades organic substrate completely to $CO_{2}$ (i.e. release of fermentation products to soil is negligible), and the extracellular enzymes production is negligible (see the data selection for detail explanation).
+Here we present a theoretical background and formulation of a mathematical model, which is inspired by the Dynamic Energy Budget theory [@Hanegraaf2001; @kooijman1991; @Kooijman2009], and is used to explain variability in macromolecular composition of soil microbial biomass. The model is hereafter denoted as "sub-microbial". As compared to Dynamic Energy Budget theory, the sub-microbial model is defined directly on C-1 molar basis to avoid excessive number of conversion factors, and the terminology common to soil microbial studies is used. For simplicity, we assume that the microbial community is composed of heterotrophic microorganisms, volume and shape of all microbial cells do not change over time and it is similar across soils, the aerobic conditions dominate in all microenvironments, the catabolic reactions within the cell degrades organic substrate completely to $CO_{2}$ (i.e. release of fermentation products to soil is negligible), and the extracellular enzymes production is negligible (see the data selection for detail explanation).
 
-The model is schematically shown on Fig. 1C (see also Tab. 1 for list of symbols and their explanation) and recognizes four different carbon pools - organic substrate ($S$), $B$, $G$, and $CO_{2}$. Total microbial biomass ($MB$) is a sum of $B$ and $B \times G$ because $G$ is scaled to $B$ (i.e. growth intermediates are located inside the cell). $S$ is the entire source of energy and C for microbial biomass. Its uptake rate ($U$) is proportional to $B$ (i.e. $G$ has no effect) and follows classical hyperbolic scaling with $S$:
+The sub-microbial model is schematically shown on Fig. 1C (see also Tab. 1 for list of symbols and their explanation) and recognizes four different carbon pools - organic substrate ($S$), $B$, $G$, and $CO_{2}$. Total microbial biomass ($MB$) is a sum of $B$ and $B \times G$ because $G$ is scaled to $B$ (i.e. growth intermediates are located inside the cell). $S$ is the entire source of energy and C for microbial biomass. Its uptake rate ($U$) is proportional to $B$ (i.e. $G$ has no effect) and follows classical hyperbolic scaling with $S$:
 
 $U = I_m \times B \times f;~~~f = \frac{S}{K_m + S}.$ (1)
 
@@ -88,7 +88,7 @@ $\frac{dCO_2}{dt} = R_{assimilatory} + R_{maintenance}+min(R_{growth}, 0).$ (13)
 
 The last term of eq. 13 ($min(R_{growth}, 0)$) means that the growth respiration occurs only when growth is realized ($\mu$ is positive).
 
-When the model is specified for the experiments supplying isotopically labelled carbon substrates to soil (see below), each pool needs to be divided into two that correspond to two different C isotopes. Flows of two different isotopes follow the same rules and their ratio is defined by the relative amount of heavier/radioactive isotope of the source pool. The isotope specific model is desrcibed in detail in Supplementary Information.
+When the model is specified for the experiments supplying radiolabelled carbon substrates to soil, each pool needs to be divided into two that correspond to two different C isotopes. Flows of two different isotopes follow the same rules and their ratio is defined by the relative amount of radioactive isotope of the source pool. The detail formulation of isotope-specific sub-microbial pool is reported in Supplementary Information, section 1.2. Isotope-specific models.
 
 #### 2.1.2. Conversion factors
 
@@ -134,6 +134,8 @@ The mathematical models were written and run in python [@vanrossum1995]. Paramet
 
 ### 3.1. Individual studies
 
+The correspondence between model predictions and observations in each individual study is graphically shown in Supplementary Information section 2. Individual studies. The summary of the results is reported in Table 2. In table 3, model parameters optimized to fit the data within individual studies are further reported.
+
 ## 4. Discussion
 
 ## Tables
@@ -141,7 +143,7 @@ The mathematical models were written and run in python [@vanrossum1995]. Paramet
 **Table 1:** List of symbols used in mathematical model formulation. Explanation and units are reported to each symbol. Parameters marked by symbol '\*' are subjected to calibration (see section 2.3. Model calibration and statistical analyses for details).
 
 |     **Symbol**     |                           **Explanation**                            |                    **Unit**                     |
-|:--------------:|:-------------------------------:|:---------------------:|
+|:----------------:|:------------------------------:|:---------------------:|
 |     **Pools**      |                                                                      |                                                 |
 |         S          |                          Organic substrate                           |             $\mu mol(C)~g(DW)^{-1}$             |
 |         B          |                            Basal biomass                             |             $\mu mol(C)~g(DW)^{-1}$             |
@@ -172,9 +174,43 @@ The mathematical models were written and run in python [@vanrossum1995]. Paramet
 |      $p_G$\*       |                  Relative amount of PLFA in pool G                   |                    unitless                     |
 |      $p_B$\*       |                  Relative amount of PLFA in pool B                   |                    unitless                     |
 
+**Table 2:** Fit
+
+| Study                        | Substrate |            |              |               |          |     |
+|-----------|-----------|-------------|---------|-----------|-----------|-----------|
+|                              |           | ${}^{14}S$ | ${}^{14}CLC$ | ${}^{14}CO_2$ | $k_{ec}$ |     |
+| Glanville et al. (2016)      | Glucose   |            | 0.85         | 0.99          | 0.77     |     |
+|                              | Alanine   |            | 0.67         | 0.98          | 0.69     |     |
+| Sparling et al. (1988, 1990) |           | 0.98       | 0.84         | 0.78          | 0.14     |     |
+|                              |           |            |              |               |          |     |
+|                              |           |            |              |               |          |     |
+|                              |           |            |              |               |          |     |
+|                              |           |            |              |               |          |     |
+|                              |           |            |              |               |          |     |
+|                              |           |            |              |               |          |     |
+|                              |           |            |              |               |          |     |
+|                              |           |            |              |               |          |     |
+
+**Table 3:** Parameters
+
+| Study                        | Substrate | $I_m$           | $K_m$           | $y_A$           | $G_m$           | m                                             | g                              | $n_G$           | $n_{B}$         | $i_B$ | $t_G$ | $t_B$ | $p_G$ | $p_B$ |
+|-----|-----|-----|-----|-----|------|-----|-----|---------|-----|-----|-----|-----|-----|-----|
+| Glanville et al. (2016)      | Glucose   | $13.5 \pm 3.37$ | $0.12 \pm 0.22$ | $0.94 \pm 0.05$ | $6.39 \pm 1.23$ | $8.15 \times 10^{-4} \pm 3.07 \times 10^{-4}$ | $0.15 \pm 0.09$                | $0.43 \pm 0.03$ | $0.28 \pm 0.02$ |       |       |       |       |       |
+|                              | Alanine   | $9.86 \pm 3.33$ | $0.11 \pm 0.10$ | $0.89 \pm 0.06$ | $4.57 \pm 1.61$ | $1.24 \times 10^{-3} \pm 1.55 \times 10^{-3}$ | $0.29 \pm 0.12$                | $0.36 \pm 0.02$ | $0.27 \pm 0.02$ |       |       |       |       |       |
+| Sparling et al. (1988, 1990) | Glucose   | $0.11 \pm 0.04$ | $0.15 \pm 0.13$ | $0.67 \pm 0.05$ | $0.76 \pm 0.79$ | $6.21 \times 10^{-7} \pm 5.08 \times 10^{-7}$ | $0.02 \pm 4.58 \times 10^{-3}$ | $0.42 \pm 0.10$ | $0.15 \pm 0.06$ |       |       |       |       |       |
+|                              |           |                 |                 |                 |                 |                                               |                                |                 |                 |       |       |       |       |       |
+|                              |           |                 |                 |                 |                 |                                               |                                |                 |                 |       |       |       |       |       |
+|                              |           |                 |                 |                 |                 |                                               |                                |                 |                 |       |       |       |       |       |
+|                              |           |                 |                 |                 |                 |                                               |                                |                 |                 |       |       |       |       |       |
+|                              |           |                 |                 |                 |                 |                                               |                                |                 |                 |       |       |       |       |       |
+|                              |           |                 |                 |                 |                 |                                               |                                |                 |                 |       |       |       |       |       |
+|                              |           |                 |                 |                 |                 |                                               |                                |                 |                 |       |       |       |       |       |
+|                              |           |                 |                 |                 |                 |                                               |                                |                 |                 |       |       |       |       |       |
+|                              |           |                 |                 |                 |                 |                                               |                                |                 |                 |       |       |       |       |       |
+
 ## Figures
 
-```{r Figure1, out.height = "700px", out.width='800px', echo=F, message=FALSE, fig.cap="**Figure 1:** **A)** Relationship between the specific growth rate of Aerobacter aerogenes population, its cell mass (dark grey circles) and three different cell components - proteins (empty cirles), RNA (light grey circles), and DNA (black circles). Data were redrawn from Herbert (1961). Lines represent fit of the model described in section 2.1.1. Mathematical model. Model parameters that were used to draw the predictions are reported in Tab. S1. **B)** Relationship between the amount of growth intermediates scaled to the maximum that microbial cell can have $$(\\frac{G}{G_m})$$ and the $$k_{ec}$$ factor (i.e. chloroform labile part of microbial biomass) depending on the value of parameters $$n_G$$ and $$n_B$$ representing respectively the relative amount of basal microbial biomass and growth intermediates extrated from soil after chloroform fumigation (see Tab. 1 and section 2.1.1. Mathematical model for detail explanation). **C)** Schematic representation of mathematical model described in section 2.1.1. Mathematical model. Different boxes represent different carbon pools. Arrows represent different carbon fluxes. "}
+```{r Figure1, out.height = "700px", out.width='800px', echo=F, message=FALSE, fig.cap="**Figure 1:** **A)** Relationship between the specific growth rate of Aerobacter aerogenes population, its cell mass (dark grey circles) and three different cell components - proteins (empty cirles), RNA (light grey circles), and DNA (black circles). Data were redrawn from Herbert (1961). Lines represent fit of the model described in section 2.1.1. Mathematical model. Model parameters that were used to draw the predictions are reported in Tab. S1. **B)** Relationship between the amount of growth intermediates scaled to the maximum that microbial cell can have $$(\\frac{G}{G_m})$$ and the $$k_{ec}$$ factor (i.e. chloroform labile part of microbial biomass) depending on the value of parameters $$n_G$$ and $$n_B$$ representing respectively the relative amount of basal microbial biomass and growth intermediates extrated from soil after chloroform fumigation (see Tab. 1 and section 2.1.1. Mathematical model for detail explanation). **C)** Schematic representation of sub-microbial model described in section 2.1.1. Mathematical model. Different boxes represent different carbon pools. Arrows represent different carbon fluxes. "}
 knitr::include_graphics("../Manuscript/Theoretical.pdf")
 ```
 

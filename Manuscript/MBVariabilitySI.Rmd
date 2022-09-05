@@ -10,9 +10,46 @@ output: word_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
+```{r libraries and ggplot theme, echo=FALSE, warning=FALSE, message=FALSE}
+#Libraries
+library(ggplot2)
+library(dplyr)
+library(reshape)
+library(minpack.lm)
+library(bbmle)
+library(deSolve)
+library(FME)
+library(DEoptim)
+library(ABCoptim)
+library(rcompanion)
+library(optimx)
+library(reticulate)
+library(gridExtra)
+#ggplot theme
+theme_min<-theme(axis.text.x=element_text(vjust=0.2, size=18, colour="black"),
+                 axis.text.y=element_text(hjust=0.2, size=18, colour="black"),
+                 axis.title=element_text(size=18, colour="black"),
+                 axis.line=element_line(size=0.5, colour="black"),
+                 strip.text=element_text(size=18, face="bold"),
+                 axis.ticks=element_line(size=1, colour="black"),
+                 #axis.ticks.length=unit(-0.05, "cm"),
+                 panel.background=element_rect(colour="black", fill="white"),
+                 panel.grid=element_line(linetype=0),
+                 legend.text=element_text(size=14, colour="black"),
+                 legend.title=element_text(size=14, colour="black"),
+                 legend.position=c("right"),
+                 legend.key.size=unit(1, "cm"),
+                 strip.background=element_rect(fill="grey98", colour="black"),
+                 legend.key=element_rect(fill="white", size=1.2),
+                 legend.spacing=unit(0.5, "cm"),
+                 plot.title=element_text(size=18, face="bold", hjust=-0.05))
+```
+
 ## 1. Microbially-explicit models
 
-### 1.1. Monod model
+### 1.1. Natural abundance of carbon isotopes
+
+#### 1.1.1. Monod model
 
 Monod model defines three pools of organic carbon (C) - organic substrate (S), microbial biomass (MB) and carbon dioxide ($CO_2$). The changes of these pools over time are defined by following equations:
 
@@ -50,7 +87,7 @@ $PLFA = MB \times k_{PLFA}.$ (S11)
 
 In eqs. S8 - S11, symbols $CLC$, $k_{ec}$, $k_{DNA}$, $k_{ATP}$, and $k_{PLFA}$ denote chloroform-labile organic carbon, and conversion factors between $CLC$, DNA, ATP and PLFA, respectively.
 
-### 1.2. Pirt model
+#### 1.1.2. Pirt model
 
 Pirt model is almost identical to Monod model. The only difference is the presence of maintenance. $MB$ has to maintain its integrity. Integrity maintenance requires energy, which is covered from $MB$ and results in $CO_2$ production ($R_{maintenance}$). $R_{maintenance}$ is proportional to $MB$ via the specific maintenance rate constant ($m$):
 
@@ -68,7 +105,132 @@ Conversion factors between different proxy-parameters and $MB$ is defined the sa
 
 The Monod, Pirt and two-pool biomass model defined in main text represent gradient of increasing complexity and number of model parameters.
 
-## 2. Supplementary tables
+### 1.2. Isotope-specific models
+
+#### 1.2.1. Sub-microbial model
+
+The isotope-specific sub-microbial model have eight pools represented by symbols ${}^{12}S$, ${}^{12}B$, ${}^{12}G$, ${}^{12}CO_{2}$, ${}^{14}S$, ${}^{14}B$, ${}^{14}G$ and ${}^{14}CO_{2}$. The left superscripts of the symbols denote either natural carbon isotope 12 or radioactive isotope 14. Sum of two isotopes in respective pool defines the total pool:
+
+$S = {}^{12}S + {}^{14}S,$ (S16)
+
+$B = {}^{12}B + {}^{14}B,$ (S17)
+
+$G = {}^{12}G + {}^{14}G,$ (S18)
+
+$CO_2 = {}^{12}CO_2 + {}^{14}CO_2.$ (S19)
+
+The fluxes between the total pools are defined the same way as described in main text (section 2.1. Mathematical model). Isotope-specific fluxes are proportional to total fluxes by the relative abundance of the source pools. The relative abundance is defined in respect to radioactive carbon isotope as:
+
+$S_{at} = \frac{{}^{14}S}{{}^{14}S + {}^{12}S},$ (S20)
+
+$B_{at} = \frac{{}^{14}B}{{}^{14}B + {}^{12}B},$ (S21)
+
+$G_{at} = \frac{{}^{14}G}{{}^{14}G + {}^{12}G},$ (S22)
+
+$CO_{2at} = \frac{{}^{14}CO_2}{{}^{14}CO_2 + {}^{12}CO_2}.$ (S23)
+
+Implementing eqs. S20 - S21 into eqs. 10 - 13 reported in main text, isotope-specific sub-microbial model is defined as:
+
+$\frac{d^{12}S}{dt} = -U \times (1-S_{at}),$ (S24)
+
+$\frac{d^{12}G}{dt} = A_m \times [f \times (1-S_{at})-\frac{G}{G_m}\times (1-G_{at})],$ (S25)
+
+$\frac{d^{12}B}{dt} = \left\{ \begin{array}{rcl}\mu \times B \times (1-G_{at}) & \mbox{for}& \mu \geq 0 \\\ \mu \times B \times (1+g) \times (1-B_{at}) & \mbox{for} & \mu < 0\end{array}\right.,$ (S26)
+
+$\frac{d^{12}CO_2}{dt} = \left\{ \begin{array}{rcl} R_{assimilatory} \times (1-S_{at}) + (R_{maintenance}+R_{growth}) \times (1-G_{at}) & \mbox{for}& \mu \geq 0 \\\ R_{assimilatory} \times (1-S_{at}) + R_{maintenance} \times (1-B_{at}) & \mbox{for} & \mu < 0\end{array}\right.,$ (S27)
+
+$\frac{d^{14}S}{dt} = -U \times S_{at},$ (S28)
+
+$\frac{d^{14}G}{dt} = A_m \times (f \times S_{at}-\frac{G}{G_m}\times G_{at}),$(S29)
+
+$\frac{d^{14}B}{dt} = \left\{ \begin{array}{rcl}\mu \times B \times G_{at} & \mbox{for}& \mu \geq 0 \\\ \mu \times B \times (1+g) \times B_{at} & \mbox{for} & \mu < 0\end{array}\right.,$ (S30)
+
+$\frac{d^{14}CO_2}{dt} = \left\{ \begin{array}{rcl} R_{assimilatory} \times S_{at} + (R_{maintenance}+R_{growth}) \times G_{at} & \mbox{for}& \mu \geq 0 \\\ R_{assimilatory} \times S_{at} + R_{maintenance} \times B_{at} & \mbox{for} & \mu < 0\end{array}\right..$ (S31)
+
+#### 1.2.2. Monod model
+
+Isotope-specific Monod model is defined using same principles as defined for sub-microbial model. The model is thus defined by following differential equations:
+
+$\frac{d^{12}S}{dt}=-uptake \times (1-S_{at})+death\times (1-MB_{at}),$ (S32)
+
+$\frac{d^{12}MB}{dt}=growth \times (1-S_{at})-death \times (1-MB_{at}),$ (S33)
+
+$\frac{d^{12}CO_2}{dt}=R_{growth} \times (1-S_{at}),$ (S34)
+
+$\frac{d^{14}S}{dt}=-uptake \times S_{at}+death\times MB_{at},$ (S35)
+
+$\frac{d^{14}MB}{dt}=growth \times S_{at}-death \times MB_{at},$ (S36)
+
+$\frac{d^{14}CO_2}{dt}=R_{growth} \times S_{at}.$ (S37)
+
+In eqs. S32 - S37, $MB_{at}$ is defined as:
+
+$MB_{at} = \frac{{}^{14}MB}{{}^{14}MB + {}^{12}MB}.$ (S38)
+
+#### 1.2.3. Pirt model
+
+Isotope-specific Pirt model is defined by following differential equations:
+
+$\frac{d^{12}S}{dt}=-uptake \times (1-S_{at})+death\times (1-MB_{at}),$ (S39)
+
+$\frac{d^{12}MB}{dt}=growth \times (1-S_{at})-death \times (1-MB_{at}) -R_{maintenance} \times (1-MB_{at}),$ (S40)
+
+$\frac{d^{12}CO_2}{dt}=R_{growth} \times (1-S_{at}) + R_{maintenance} \times (1-MB_{at}),$ (S41)
+
+$\frac{d^{14}S}{dt}=-uptake \times S_{at}+death\times MB_{at},$ (S42)
+
+$\frac{d^{14}MB}{dt}=growth \times S_{at}-death \times MB_{at} -R_{maintenance} \times MB_{at},$ (S43)
+
+$\frac{d^{14}CO_2}{dt}=R_{growth} \times S_{at} + R_{maintenance} \times MB_{at}.$ (S43)
+
+Notice, that no isotope discrimination is assumed in all models.
+
+## 2. Individual studies
+
+### 2.1. Glanville et al. (2016)
+
+```{r Glanville, echo=FALSE, fig.height=8, fig.width=8, message=FALSE, warning=FALSE, fig.cap="**Figure S1**: Correspondence between the model fit (solid lines) and observations reported in the study of Glanville et al. (2016). **A:** radiocative carbon in chloroform-labile organic carbon over time following either glucose (grey circles) or alanin (empty circle) addition. **B:** radiocative carbon in produced $$CO_2$$ over time following either glucose (grey circles) or alanin (empty circle) addition. **C:** conversion factor between chloroform-labile organic carbon and total soil microbial biomass estimated as a residual fraction of radioactive carbon in microbial biomass that is not released by chloroform vapors. See the main text section 2.1.1. Mathematical model for details about the model."}
+#Observations
+GlData = read.csv("../SoilMBVariabilityData/Glanville2016.csv")
+#Simulations
+GlSim <- read.csv("../Manuscript/figure_data/SimGlanville.csv") 
+
+grid.arrange(
+  ggplot(GlData, aes(Time, Flush)) + geom_point(cex=6, pch=21, aes(fill = Substrate)) +
+  theme_min + ylab(expression(paste("CLC (pmo", l^{14},C~g(DW)^{-1}, ")"))) + xlab("Time (days)") + 
+  theme(legend.position = c(0.6, 0.8), legend.title = element_blank()) + 
+  scale_fill_manual(values = c("white", "grey")) +
+  geom_line(data = GlSim, aes(Time, Flush, color = Substrate), lwd = 1.2) +
+  scale_color_manual(values = c("grey30", "black")) + ggtitle("A)"),
+  ggplot(GlData, aes(Time, CO2)) + geom_point(cex=6, pch=21, aes(fill = Substrate), show.legend = F) +
+  theme_min + ylab(expression(paste(CO[2], " (pmo", l^{14},C~g(DW)^{-1}, ")"))) + xlab("Time (days)") + 
+  theme(legend.position = c(0.8, 0.4), legend.title = element_blank()) + 
+  scale_fill_manual(values = c("white", "grey")) +
+  geom_line(data = GlSim, aes(Time, CO2, color = Substrate), lwd = 1.2, show.legend = F) +
+  scale_color_manual(values = c("grey30", "black")) + ggtitle("B)"),
+  ggplot(GlData, aes(Time, kec)) + geom_point(cex=6, pch=21, aes(fill = Substrate), show.legend = F) +
+  theme_min + ylab(expression(paste(italic(k[ec])~factor))) + xlab("Time (days)") + 
+  theme(legend.position = c(0.8, 0.6), legend.title = element_blank()) + 
+  scale_fill_manual(values = c("white", "grey")) + scale_y_continuous(limits = c(0.2, 0.43)) +
+  geom_line(data = GlSim, aes(Time, kec, color = Substrate), lwd = 1.2, show.legend = F) +
+  scale_color_manual(values = c("grey30", "black")) + ggtitle("C)"),
+  nrow = 2
+)
+```
+
+### 2.2. Sparling et al. (1988, 1990)
+
+```{r Sparling, echo=FALSE, fig.height=8, fig.width=8, message=FALSE, warning=FALSE, fig.cap="**Figure S1**: Correspondence between the model fit (solid lines) and observations reported in the study of Glanville et al. (2016). **A:** radiocative carbon in chloroform-labile organic carbon over time following either glucose (grey circles) or alanin (empty circle) addition. **B:** radiocative carbon in produced $$CO_2$$ over time following either glucose (grey circles) or alanin (empty circle) addition. **C:** conversion factor between chloroform-labile organic carbon and total soil microbial biomass estimated as a residual fraction of radioactive carbon in microbial biomass that is not released by chloroform vapors. See the main text section 2.1.1. Mathematical model for details about the model."}
+#Observations
+SData = read.csv("../SoilMBVariabilityData/Sparling1990.csv")
+#Simulations
+SSim <- read.csv("../Manuscript/figure_data/SimSparling.csv") 
+
+
+
+```
+
+## 3. Supplementary tables
 
 **Table S1:** Parameters of mathematical model described in section 2.1.1. Mathematical model in the main text that were used to fit data shown on Fig. 1A.
 
@@ -102,7 +264,7 @@ The Monod, Pirt and two-pool biomass model defined in main text represent gradie
 | $p_G$     | 0                  | 1                 |
 | $p_B$     | 0                  | 1                 |
 
-## 3. Supplementary figures
+## 4. Supplementary figures
 
 ```{r Figure1, out.height = "600px", out.width='900px', echo=F, message=FALSE, fig.cap="**Figure S1:** Prisma flow diagram of the publications selection procedure."}
 knitr::include_graphics("../Manuscript/prismaMBData.pdf")
