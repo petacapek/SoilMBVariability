@@ -110,59 +110,67 @@ According to @Hanegraaf2001, DNA is only part of pool $B$ so Eq. 15 contains onl
 
 ### 2.2. Data collection
 
-To test the accuracy of the theoretical background, the model defined above was confronted with data published in the literature. Because the aim of the study is to analyze the relationship between the growth rate and composition of soil microbial biomass, we searched for studies in which the growth rate or composition of microbial biomass was reported to change. The studies were searched on the Web of Science, PubMed and Scopus (Fig. SX) using the keywords 'soil', 'microbial biomass', 'growth', 'carbon', 'ATP', 'DNA', 'PLFA', 'radiolabel', 'isotope', 'substrate addition', and their combinations. This search resulted in 3924 indexed studies. We also searched in citations of four most relevant publications [@bremer1990; @glanville2016; @Marstorp1999; @nguyen2001] resulting in additional (partially overlapping) 343 studies. These studies were analyzed and filtered according to following criteria: (i) the selected experiments had to be short-term to make sure the death rate and extracellular enzyme production can be neglected in mass balance, (ii) the data had to be available for more than three different time points, (iii) at least three different C pools had to be measured and ideally two of them are different biomass proxies, and (iv) initial conditions had to be well defined (Fig. SX, i.e. note that several studies did not comply with more than one criteria). Applying these criteria, only seven eligible studies were selected and further analyzed @bremer1990; @glanville2016; @joergensen2002; @Marstorp1999; @santruckova2004; @tsai1997; @nannipieri1978. Due to the low number of eligible studies, four exceptions were made. Study of @blagodatskaya2014 was selected regardless the criterion (iii) to increase the number of studies reporting change of DNA concentration over time following saturating concentration of organic substrate. Study of @ziegler2005 was again selected regardless the criterion (iii) because it is the only study reporting change of PLFA concentration over time with sufficient temporal resolution. Studies of @sparling1988 and @Sparling1990a were selected regardless the criterion (ii) because they report large number of $k_{ec}$ estimates for soils with reasonably well defined initial conditions.
+To test the accuracy of the theoretical background, the model defined above was confronted with data published in the literature. Because the aim of the study is to analyze the relationship between the growth rate and composition of soil microbial biomass, we searched for studies in which the growth rate or composition of microbial biomass was reported to change. The studies were searched on the Web of Science, PubMed and Scopus (Fig. S1) using the keywords 'soil', 'microbial biomass', 'growth', 'carbon', 'ATP', 'DNA', 'PLFA', 'radiolabel', 'isotope', 'substrate addition', and their combinations. This search resulted in 3924 indexed studies. We also searched in citations of four most relevant publications [@bremer1990; @glanville2016; @Marstorp1999; @nguyen2001] resulting in additional (partially overlapping) 343 studies. These studies were analyzed and filtered according to following criteria: (i) the selected experiments had to be short-term to make sure the death rate and extracellular enzyme production can be neglected in mass balance, (ii) the data had to be available for more than three different time points, (iii) at least three different C pools had to be measured and ideally two of them are different biomass proxies, and (iv) initial conditions had to be well defined (Fig. S1, i.e. note that several studies did not comply with more than one criteria). Applying these criteria, only seven eligible studies were selected and further analyzed @bremer1990; @glanville2016; @joergensen2002; @Marstorp1999; @santruckova2004; @tsai1997; @nannipieri1978. Due to the low number of eligible studies, four exceptions were made. Study of @blagodatskaya2014 was selected regardless the criterion (iii) to increase the number of studies reporting change of DNA concentration over time following saturating concentration of organic substrate. Study of @ziegler2005 was again selected regardless the criterion (iii) because it is the only study reporting change of PLFA concentration over time with sufficient temporal resolution. Studies of @sparling1988 and @Sparling1990a were selected regardless the criterion (ii) because they report large number of $k_{ec}$ estimates for soils with reasonably well defined initial conditions.
 
-Data were extracted from publications either directly or using the WebPlotDigitizer. When some data points were overlapping in graphs, they were not extracted. All extracted data were recalculated to $\mu$mol of carbon per gram of oven dried soil applying conversion factors reported in @Vrede2004. When total microbial biomass was reported, the respective biomass proxy that was directly measured was calculated using a conversion factor reported in the study (i.e. typically 0.45 for $k_{ec}$ factor). The data are available at <https://github.com/petacapek/SoilMBVariability>.
+Data were extracted from publications either directly or using the WebPlotDigitizer. When some data points were overlapping in graphs, they were not extracted. All extracted data were recalculated to $\mu mol$ of carbon per gram of oven dried soil applying conversion factors reported in @Vrede2004. When total microbial biomass was reported, the respective biomass proxy that was directly measured was calculated using a conversion factor reported in the study (i.e. typically 0.45 for $k_{ec}$ factor). The data are available at <https://github.com/petacapek/SoilMBVariability>.
 
 ### 2.3. Model calibration and statistical analyses
 
-The model was first calibrated against the data reported in individual studies to asses its ability to explain the temporal variability in different C pools and $k_{ec}$ factor following substrate addition. Model parameters were adjusted to minimize the objective function $J$ using the Artificial Bee Colony algorithm [@vegayon2017] within a predefined range of parameters' values (Tab. SX). The objective function $J$ was defined for each measured variable as:
+The model was first calibrated against the data reported in individual studies to asses its ability to explain the temporal variability in different C pools and $k_{ec}$ factor following substrate addition. Model parameters were adjusted to minimize the objective function $J$ using the Artificial Bee Colony algorithm [@vegayon2017] within a predefined range of parameters' values (Tab. S2). The objective function $J$ was defined for each measured variable as:
 
 $J = \sum\limits_{i=1}^{n}{(\frac{P_{i}-O_{i}}{SD})^{2}} ,$ (18)
 
 where $O_{i}$ and $P_{i}$ stand for observation $i$ and its corresponding value predicted by the model, and $SD$ is the standard deviation of all observations. The objective functions calculated for each measured variable were summed up. Uncertainty of parameters estimates were additionally determined by Constrained Markov Chain Monte Carlo simulation on 5000 iterations using R package FME [@Soetaert2010] applying the parameter values defined by the Artificial Bee Colony algorithm as initial starting point. To evaluate the goodness of correspondence between model predictions and data, coefficient of determination $(R^{2})$ adjusted to number of observations and model parameters was calculated.
 
-We further evaluated if the goodness of model fit is significantly better than the fit of two most commonly used microbial-explicit models of Monod and Pirt, which assume constant composition of soil microbial biomass (and therefore have less parameters). Structure of both models is described in Supplementary Information. The significance of the difference was evaluated across all measured data (i.e. all measured variables at all time points). Because different variables have different means and variability, all data were first standardized to have zero mean and unit variance. This was achieved by subtracting means of respective variables from individual observations and dividing by standard deviation. Sum of squared differences between the standardized observations and standardized predictions provides normalized $F$ value, which is independent of variable identity. Using this value, F test was performed to evaluated the significance of goodness of fit difference between the models. The comparison was not performed in studies reporting directly measured $k_{ec}$ factor, against which the model with two biomass pools was calibrated, because Monod and Pirt models cannot predict the $k_{ec}$ variability so the comparison is meaningless.
+We further evaluated if the goodness of model fit is significantly better than the fit of two most commonly used microbial-explicit models of Monod and Pirt, which assume constant composition of soil microbial biomass (and therefore have less parameters). Both models are described in Supplementary Information, section 1. Microbially-explicit models. The significance of the difference was evaluated across all measured data (i.e. all measured variables at all time points). Because different variables have different means and variability, all data were first standardized to have zero mean and unit variance. This was achieved by subtracting means of respective variables from individual observations and dividing by standard deviation. Sum of squared differences between the standardized observations and standardized predictions provides normalized $F$ value, which is independent of variable identity. Using this value, F test was performed to evaluated the significance of goodness of fit difference between the models. The comparison was not performed in studies reporting directly measured $k_{ec}$ factor, against which the model with two biomass pools was calibrated, because Monod and Pirt models cannot predict the $k_{ec}$ variability so the comparison is meaningless.
 
 To further asses generalizability of the theoretical background, model calibration was performed across all studies and the goodness of model fit was analyzed. To minimize number of model parameters, study of @ziegler2005 was excluded from the analysis. Thus, only the conversion factors between total soil microbial biomass, CFC, DNA, and ATP were estimated. Due to the low temporal resolution, studies of @sparling1988 and @Sparling1990a (see above) were also excluded. Because the studies supplying isotopically labelled and unlabelled organic substrate were analyzed together, certain offset in model predictions must appear independently of theoretical background validity (see the discussion section).
 
 To perform calibration of model parameters, initial conditions must be defined. This is not always possible when total soil biomass is composed of two pools whose content is apriori unknown. In studies that report temporal dynamic of two microbial proxies, the initial pools $B$ and $G$ were calculated as a product of conversion factors between total soil microbial biomass and reported proxies, and the initial concentration of the proxies. In other studies, $G$ was assumed to be initially equal to $\frac{m \times G_{m}}{I_m \times y_A}$ so the $G$ is large enough to only cover maintenance costs. When the model was calibrated against data from all studies combined, we simply assumed that initial $G$ is close to zero.
 
+The mathematical models were written and run in python [@vanrossum1995]. Parameter estimation and all statistical analyses were performed in R [@rcoreteam2020].
+
+## 3. Results
+
+### 3.1. Individual studies
+
+## 4. Discussion
+
 ## Tables
 
-**Table 1:** List of symbols used in mathematical model formulation. Explanation and units are reported to each symbol. Parameters marked by symbol '*' are subjected to calibration (see section 2.3. Model calibration and statistical analyses for details).
+**Table 1:** List of symbols used in mathematical model formulation. Explanation and units are reported to each symbol. Parameters marked by symbol '\*' are subjected to calibration (see section 2.3. Model calibration and statistical analyses for details).
 
-| **Symbol**       | **Explanation**                                | **Unit**                               |
-|:----------------:|:----------------------------------------------:|:--------------------------------------:|
-| **Pools**                                                                                                |||
-|S                 |Organic substrate                               | $\mu mol(C)~g(DW)^{-1}$                |
-|B                 |Basal biomass                                   | $\mu mol(C)~g(DW)^{-1}$                |
-|G                 |Growth intermediates                            | $\mu mol(C)~\mu mol(C~of~pool~B)^{-1}$ |
-|$CO_2$            |Carbon dioxide                                  | $\mu mol(C)~g(DW)^{-1}$                |
-|MB                |Total microbial biomass ($MB=(B+B \times G)$)   | $\mu mol(C)~g(DW)^{-1}$                |
-| **Fluxes**                                                                                               |||
-|U                 |Organic substrate uptake rate (eq. 1)           | $\mu mol(C)~g(DW)^{-1}~day^{-1}$       |
-|A                 |Rate of organic substrate assimilation into G (eq. 1)| $\mu mol(C)~g(DW)^{-1}~day^{-1}$  |
-|$R_{assimilatory}$|Assimilatory respiration (eq. 3)                | $\mu mol(C)~g(DW)^{-1}~day^{-1}$       |
-|J                 |Mobilization rate of G (eq. 4)     |      $\mu mol(C)~\mu mol(C~of~pool~B)^{-1} day^{-1}$|
-|$R_{maintenance}$ |Maintenance respiration (eq. 5)                 | $\mu mol(C)~g(DW)^{-1}~day^{-1}$       |
-|$R_{growth}$      |Growth respiration (eq. 5)                      | $\mu mol(C)~g(DW)^{-1}~day^{-1}$       |
-|$\mu$             |Specific growth rate (eq. 6)           |  $\mu mol(C)~\mu mol(C~of~pool~B)^{-1} day^{-1}$|
-| **Parameters**                                                                                           |||
-|$I_m$             |Maximum uptake rate                    |  $\mu mol(C)~\mu mol(C~of~pool~B)^{-1} day^{-1}$|
-|$K_m$*            |Half-saturation constant                        | $\mu mol(C)~g(DW)^{-1}$                |
-|$y_A$*            |Assimilation efficiency                         |unitless                                |
-|$A_m$        |Maximum assimilation rate ($I_m \times y_A$)|  $\mu mol(C)~\mu mol(C~of~pool~B)^{-1} day^{-1}$|
-|$G_m$*       |Maximum amount of G within B                         |  $\mu mol(C)~\mu mol(C~of~pool~B)^{-1}$|
-|m*           |Specific maintenance rate coefficient       |  $\mu mol(C)~\mu mol(C~of~pool~B)^{-1} day^{-1}$|
-|g*           |Growth costs                                         |  $\mu mol(C)~\mu mol(C~of~pool~B)^{-1}$|
-|$n_G$*            |Relative amount of G extracted from soil after chloroform fumigation  |unitless          |
-|$n_B$*            |Relative amount of B extracted from soil after chloroform fumigation  |unitless          |
-|$i_B$*            |Relative amount of DNA in pool B                |unitless                                |
-|$t_G$*            |Relative amount of ATP in pool G                |unitless                                |
-|$t_B$*            |Relative amount of ATP in pool B                |unitless                                |
-|$p_G$*            |Relative amount of PLFA in pool G               |unitless                                |
-|$p_B$*            |Relative amount of PLFA in pool B               |unitless                                |
+|     **Symbol**     |                           **Explanation**                            |                    **Unit**                     |
+|:--------------:|:-------------------------------:|:---------------------:|
+|     **Pools**      |                                                                      |                                                 |
+|         S          |                          Organic substrate                           |             $\mu mol(C)~g(DW)^{-1}$             |
+|         B          |                            Basal biomass                             |             $\mu mol(C)~g(DW)^{-1}$             |
+|         G          |                         Growth intermediates                         |     $\mu mol(C)~\mu mol(C~of~pool~B)^{-1}$      |
+|       $CO_2$       |                            Carbon dioxide                            |             $\mu mol(C)~g(DW)^{-1}$             |
+|         MB         |            Total microbial biomass ($MB=(B+B \times G)$)             |             $\mu mol(C)~g(DW)^{-1}$             |
+|     **Fluxes**     |                                                                      |                                                 |
+|         U          |                Organic substrate uptake rate (eq. 1)                 |        $\mu mol(C)~g(DW)^{-1}~day^{-1}$         |
+|         A          |        Rate of organic substrate assimilation into G (eq. 1)         |        $\mu mol(C)~g(DW)^{-1}~day^{-1}$         |
+| $R_{assimilatory}$ |                   Assimilatory respiration (eq. 3)                   |        $\mu mol(C)~g(DW)^{-1}~day^{-1}$         |
+|         J          |                    Mobilization rate of G (eq. 4)                    | $\mu mol(C)~\mu mol(C~of~pool~B)^{-1} day^{-1}$ |
+| $R_{maintenance}$  |                   Maintenance respiration (eq. 5)                    |        $\mu mol(C)~g(DW)^{-1}~day^{-1}$         |
+|    $R_{growth}$    |                      Growth respiration (eq. 5)                      |        $\mu mol(C)~g(DW)^{-1}~day^{-1}$         |
+|       $\mu$        |                     Specific growth rate (eq. 6)                     | $\mu mol(C)~\mu mol(C~of~pool~B)^{-1} day^{-1}$ |
+|   **Parameters**   |                                                                      |                                                 |
+|      $I_m$\*       |                         Maximum uptake rate                          | $\mu mol(C)~\mu mol(C~of~pool~B)^{-1} day^{-1}$ |
+|      $K_m$\*       |                       Half-saturation constant                       |             $\mu mol(C)~g(DW)^{-1}$             |
+|      $y_A$\*       |                       Assimilation efficiency                        |                    unitless                     |
+|       $A_m$        |             Maximum assimilation rate ($I_m \times y_A$)             | $\mu mol(C)~\mu mol(C~of~pool~B)^{-1} day^{-1}$ |
+|      $G_m$\*       |                     Maximum amount of G within B                     |     $\mu mol(C)~\mu mol(C~of~pool~B)^{-1}$      |
+|        m\*         |                Specific maintenance rate coefficient                 | $\mu mol(C)~\mu mol(C~of~pool~B)^{-1} day^{-1}$ |
+|        g\*         |                             Growth costs                             |     $\mu mol(C)~\mu mol(C~of~pool~B)^{-1}$      |
+|      $n_G$\*       | Relative amount of G extracted from soil after chloroform fumigation |                    unitless                     |
+|      $n_B$\*       | Relative amount of B extracted from soil after chloroform fumigation |                    unitless                     |
+|      $i_B$\*       |                   Relative amount of DNA in pool B                   |                    unitless                     |
+|      $t_G$\*       |                   Relative amount of ATP in pool G                   |                    unitless                     |
+|      $t_B$\*       |                   Relative amount of ATP in pool B                   |                    unitless                     |
+|      $p_G$\*       |                  Relative amount of PLFA in pool G                   |                    unitless                     |
+|      $p_B$\*       |                  Relative amount of PLFA in pool B                   |                    unitless                     |
 
 ## Figures
 
