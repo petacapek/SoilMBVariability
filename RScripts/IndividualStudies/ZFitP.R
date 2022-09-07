@@ -3,11 +3,11 @@ ZFitP<-function(x){
   times <- as.numeric(ZData[, c("Time")])
   timesSim <- seq(0, max(times), length.out = 100)
   #==========================Defining initial conditions that are passed to model
-  B0 = ZData$PLFAinit[1]/x[6]
-  y0 <- c(ZData$Sinit[1], B0, 0)
+  B0u = ZData$PLFAinit[1]/x[6]
+  y0 <- c(ZData$Sinit[1], 0, 0, 0, B0u)
   #==========================Running simulation
-  Yhat <- Ziegler2005ODESolvP(Pirt, x, times, y0)
-  Sim <- as.data.frame(Ziegler2005ODESolvP(Pirt, x, timesSim, y0))
+  Yhat <- Ziegler2005ODESolvP(PirtIso, x, times, y0)
+  Sim <- as.data.frame(Ziegler2005ODESolvP(PirtIso, x, timesSim, y0))
   colnames(Sim) <- c("S", "CO2", "PLFA")
   Sim$Time <- timesSim
   #==========================Calculating error that is minimized

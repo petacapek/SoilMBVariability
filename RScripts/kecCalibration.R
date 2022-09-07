@@ -299,11 +299,17 @@ ParmsSantruckova2004 <- abc_optim(fn = HPObjective,
                                   lb = as.numeric(summary(HPP)[c("min"), ]), 
                                   ub = as.numeric(summary(HPP)[c("max"), ]))
 ParmsSantruckova2004$par
+#Uncertainty
+HPPU <- modMCMC(HPObjective, p = ParmsSantruckova2004$par, 
+                lower = Parms[1:8, 2], upper = Parms[1:8, 3], niter = 5000)
+summary(HPPU)
 #==================================================#
 #Goodness of fit and simulations
 source("IndividualStudies/HPFit.R")
 SimSantruckova2004 <- HPFit(ParmsSantruckova2004$par)
 SimSantruckova2004$errors
+SimSantruckova2004$R2all
+write.csv(SimSantruckova2004$Simulation, "../Manuscript/figure_data/SimHasan.csv", row.names = F)
 #=====================Visualizing the data with simulations
 ##Cumulative respiration
 ggplot(HPData, aes(Time, CO2)) + geom_point(cex=6, pch=21, fill = "grey") +
@@ -382,11 +388,17 @@ ParmsBremer1990 <- abc_optim(fn = BKObjective,
                              lb = as.numeric(summary(BKP)[c("min"), ]), 
                              ub = as.numeric(summary(BKP)[c("max"), ])) 
 ParmsBremer1990$par
+##Uncertainty
+BKPU <- modMCMC(BKObjective, p = ParmsBremer1990$par, 
+                lower = Parms[1:8, 2], upper = Parms[1:8, 3], niter = 5000)
+summary(BKPU)
 #==================================================#
 #Goodness of fit and simulations
 source("IndividualStudies/BKFit.R")
 SimBremer1990 <- BKFit(ParmsBremer1990$par)
 SimBremer1990$errors
+SimBremer1990$R2all
+write.csv(SimBremer1990$Simulation, "../Manuscript/figure_data/SimBremer.csv", row.names = F)
 #=====================Visualizing the data with simulations
 
 ##Substrate concentration
@@ -460,11 +472,18 @@ ParmsMarstorp1999 <- abc_optim(fn = MObjective,
                                lb = as.numeric(summary(MP)[c("min"), ]), 
                                ub = as.numeric(summary(MP)[c("max"), ])) 
 ParmsMarstorp1999$par
+##Uncertainty
+MPU <- modMCMC(MObjective, p = ParmsMarstorp1999$par, 
+              lower = c(Parms[1:8, 2], 0),
+              upper = c(Parms[1:8, 3], 1), niter = 5000)
+summary(MPU)
 #==================================================#
 #Goodness of fit and simulations
 source("IndividualStudies/MFit.R")
 SimMarstorp1999 <- MFit(ParmsMarstorp1999$par)
 SimMarstorp1999$errors
+SimMarstorp1999$R2all
+write.csv(SimMarstorp1999$Simulation, "../Manuscript/figure_data/SimMarstorp.csv", row.names = F)
 #=====================Save parameters
 parsAll <- rbind(parsAll, data.frame(Study = c("Marstorp and Witter (1999)"),
                                      Treatment = c("Glucose"),
@@ -498,7 +517,7 @@ ParmsMarstorp1999M$par
 source("IndividualStudies/MFitM.R")
 SimMarstorp1999M <- MFitM(ParmsMarstorp1999M$par)
 SimMarstorp1999M$errors
-
+write.csv(SimMarstorp1999M$Simulation, "../Manuscript/figure_data/SimMarstorpM.csv", row.names = F)
 ##Pirt model
 source_python("../PythonScripts/IndividualStudies/Pirt.py")
 source_python("../PythonScripts/IndividualStudies/Marstorp1999ODESolvP.py")
@@ -517,7 +536,7 @@ ParmsMarstorp1999P$par
 source("IndividualStudies/MFitP.R")
 SimMarstorp1999P <- MFitP(ParmsMarstorp1999P$par)
 SimMarstorp1999P$errors
-
+write.csv(SimMarstorp1999P$Simulation, "../Manuscript/figure_data/SimMarstorpP.csv", row.names = F)
 #No. of observations
 nt = SimMarstorp1999$errors[6]
 #DEB model
@@ -607,9 +626,9 @@ source_python("../PythonScripts/IndividualStudies/Ziegler2005ODESolv.py")
 source("IndividualStudies/ZObjective.R")
 ##Optimization
 ##First guess by MCMC 
-ZP <- modMCMC(ZObjective, p = c(Parms[1:6,1], 0.1, 0.1), 
-              lower = c(Parms[1:6, 2], 0, 0),
-              upper = c(Parms[1:6, 3], 1, 1), niter = 30000)
+ZP <- modMCMC(ZObjective, p = c(Parms[1:6, 1], 0.1), 
+              lower = c(Parms[1:6, 2], 0),
+              upper = c(Parms[1:6, 3], 1), niter = 30000)
 summary(ZP)
 ##Estimate
 ParmsZiegler2014 <- abc_optim(fn = ZObjective, 
@@ -617,11 +636,18 @@ ParmsZiegler2014 <- abc_optim(fn = ZObjective,
                                lb = as.numeric(summary(ZP)[c("min"), ]), 
                                ub = as.numeric(summary(ZP)[c("max"), ])) 
 ParmsZiegler2014$par
+##Uncertainty
+ZPU <- modMCMC(ZObjective, p = ParmsZiegler2014$par, 
+              lower = c(Parms[1:6, 2], 0),
+              upper = c(Parms[1:6, 3], 1), niter = 5000)
+summary(ZPU)
 #==================================================#
 #Goodness of fit and simulations
 source("IndividualStudies/ZFit.R")
 SimZiegler2014 <- ZFit(ParmsZiegler2014$par)
 SimZiegler2014$errors
+SimZiegler2014$R2all
+write.csv(SimZiegler2014$Simulation, "../Manuscript/figure_data/SimZiegler.csv", row.names = F)
 #=====================Save parameters
 parsAll <- rbind(parsAll, data.frame(Study = c("Ziegler et al. (2005)"),
                                      Treatment = c("Glucose"),
@@ -639,6 +665,7 @@ parsAll <- rbind(parsAll, data.frame(Study = c("Ziegler et al. (2005)"),
 # Models comparison - F statistic
 #=================================
 ##Monod model
+source_python("../PythonScripts/IndividualStudies/MonodIso.py")
 source_python("../PythonScripts/IndividualStudies/Ziegler2005ODESolvM.py")
 source("./IndividualStudies/ZObjectiveM.R")
 ##Optimization
@@ -655,8 +682,9 @@ ParmsZiegler2005M$par
 source("IndividualStudies/ZFitM.R")
 SimZiegler2005M <- ZFitM(ParmsZiegler2005M$par)
 SimZiegler2005M$errors
-
+write.csv(SimZiegler2005M$Simulation, "../Manuscript/figure_data/SimZieglerM.csv", row.names = F)
 ##Pirt model
+source_python("../PythonScripts/IndividualStudies/PirtIso.py")
 source_python("../PythonScripts/IndividualStudies/Ziegler2005ODESolvP.py")
 source("./IndividualStudies/ZObjectiveP.R")
 ##Optimization
@@ -673,6 +701,7 @@ ParmsZiegler2005P$par
 source("IndividualStudies/ZFitP.R")
 SimZiegler2005P <- ZFitP(ParmsZiegler2005P$par)
 SimZiegler2005P$errors
+write.csv(SimZiegler2005P$Simulation, "../Manuscript/figure_data/SimZieglerP.csv", row.names = F)
 #No. of observations
 nt = SimZiegler2005M$errors[6]
 #DEB model
@@ -765,11 +794,18 @@ ParmsTsai1997 <- abc_optim(fn = TObjective,
                               lb = as.numeric(summary(TP)[c("min"), ]), 
                               ub = as.numeric(summary(TP)[c("max"), ])) 
 ParmsTsai1997$par
+##Uncertainty
+TPU <- modMCMC(TObjective, p = ParmsTsai1997$par, 
+              lower = c(Parms[1:8, 2], 0, 0),
+              upper = c(Parms[1:8, 3], 0.1, 0.1), niter = 5000)
+summary(TPU)
 #==================================================#
 #Goodness of fit and simulations
 source("IndividualStudies/TFit.R")
-SimTsai1997 <- TFit(as.numeric(summary(TP)[c("mean"), ]))
+SimTsai1997 <- TFit(ParmsTsai1997$par)
 SimTsai1997$errors
+SimTsai1997$R2all
+write.csv(SimTsai1997$Simulation, "../Manuscript/figure_data/SimTsai.csv", row.names = F)
 #=====================Save parameters
 parsAll <- rbind(parsAll, data.frame(Study = c("Tsai et al. (1997)"),
                                      Treatment = c("Glucose"),
@@ -805,7 +841,7 @@ ParmsTsai1997M$par
 source("IndividualStudies/TFitM.R")
 SimTsai1997M <- TFitM(ParmsTsai1997M$par)
 SimTsai1997M$errors
-
+write.csv(SimTsai1997M$Simulation, "../Manuscript/figure_data/SimTsaiM.csv", row.names = F)
 ##Pirt model
 source_python("../PythonScripts/IndividualStudies/Tsai1997ODESolvP.py")
 source_python("../PythonScripts/IndividualStudies/Pirt.py")
@@ -824,6 +860,7 @@ ParmsTsai1997P$par
 source("IndividualStudies/TFitP.R")
 SimTsai1997P <- TFitP(ParmsTsai1997P$par)
 SimTsai1997P$errors
+write.csv(SimTsai1997P$Simulation, "../Manuscript/figure_data/SimTsaiP.csv", row.names = F)
 #No. of observations
 nt = SimTsai1997P$errors[6]
 #DEB model
@@ -925,11 +962,18 @@ ParmsJoerg2002 <- abc_optim(fn = JObjective,
                            lb = as.numeric(summary(JP)[c("min"), ]), 
                            ub = as.numeric(summary(JP)[c("max"), ])) 
 ParmsJoerg2002$par
+##Uncertainty
+JPU <- modMCMC(JObjective, p = ParmsJoerg2002$par, 
+              lower = c(Parms[1:8, 2], 0, 0),
+              upper = c(Parms[1:8, 3], 0.1, 0.1), niter = 5000)
+summary(JPU)
 #==================================================#
 #Goodness of fit and simulations
 source("IndividualStudies/JFit.R")
 SimJoerg2002 <- JFit(ParmsJoerg2002$par)
 SimJoerg2002$errors
+SimJoerg2002$R2all
+write.csv(SimJoerg2002$Simulation, "../Manuscript/figure_data/SimJoerg.csv", row.names = F)
 #=====================Save parameters
 parsAll <- rbind(parsAll, data.frame(Study = c("Joergensen and Raubuch (2002)"),
                                      Treatment = c("Glucose"),
@@ -965,7 +1009,7 @@ ParmsJoerg2002M$par
 source("IndividualStudies/JFitM.R")
 SimJoerg2002M <- JFitM(ParmsJoerg2002M$par)
 SimJoerg2002M$errors
-
+write.csv(SimJoerg2002M$Simulation, "../Manuscript/figure_data/SimJoergM.csv", row.names = F)
 ##Pirt model
 source_python("../PythonScripts/IndividualStudies/Joerg2002ODESolvP.py")
 source_python("../PythonScripts/IndividualStudies/Pirt.py")
@@ -984,6 +1028,7 @@ ParmsJoerg2002P$par
 source("IndividualStudies/JFitP.R")
 SimJoerg2002P <- JFitP(ParmsJoerg2002P$par)
 SimJoerg2002P$errors
+write.csv(SimJoerg2002P$Simulation, "../Manuscript/figure_data/SimJoergP.csv", row.names = F)
 #No. of observations
 nt = SimJoerg2002P$errors[6]
 #DEB model
@@ -1077,11 +1122,18 @@ ParmsNanni1977 <- abc_optim(fn = NObjective,
                             lb = as.numeric(summary(NP)[c("min"), ]), 
                             ub = as.numeric(summary(NP)[c("max"), ])) 
 ParmsNanni1977$par
+##Uncertainty
+NPU <- modMCMC(NObjective, p = ParmsNanni1977$par, 
+              lower = c(Parms[1:6, 2], 1, 1, 0, 0),
+              upper = c(Parms[1:6, 3], 1000, 1000, 1, 1), niter = 5000)
+summary(NPU)
 #==================================================#
 #Goodness of fit and simulations
 source("IndividualStudies/NFit.R")
 SimNanni1977 <- NFit(ParmsNanni1977$par)
 SimNanni1977$errors
+SimNanni1977$R2all
+write.csv(SimNanni1977$Simulation, "../Manuscript/figure_data/SimNannipieri.csv", row.names = F)
 #=====================Save parameters
 parsAll <- rbind(parsAll, data.frame(Study = c("Nannipieri et al. (1977)"),
                                      Treatment = c("Glucose"),
@@ -1117,7 +1169,7 @@ ParmsNanni1977M$par
 source("IndividualStudies/NFitM.R")
 SimNanni1977M <- NFitM(ParmsNanni1977M$par)
 SimNanni1977M$errors
-
+write.csv(SimNanni1977M$Simulation, "../Manuscript/figure_data/SimNannipieriM.csv", row.names = F)
 ##Pirt model
 source_python("../PythonScripts/IndividualStudies/Nanni1977ODESolvP.py")
 source_python("../PythonScripts/IndividualStudies/Pirt.py")
@@ -1136,6 +1188,7 @@ ParmsNanni1977P$par
 source("IndividualStudies/NFitP.R")
 SimNanni1977P <- NFitP(ParmsNanni1977P$par)
 SimNanni1977P$errors
+write.csv(SimNanni1977P$Simulation, "../Manuscript/figure_data/SimNannipieriP.csv", row.names = F)
 #No. of observations
 nt = SimNanni1977P$errors[6]
 #DEB model
@@ -1227,11 +1280,18 @@ ParmsBlag2014 <- abc_optim(fn = BObjective,
                             lb = as.numeric(summary(BP)[c("min"), ]), 
                             ub = as.numeric(summary(BP)[c("max"), ])) 
 ParmsBlag2014$par
+##Uncertainty
+BPU <- modMCMC(BObjective, p = ParmsBlag2014$par, 
+              lower = c(Parms[1:6, 2], 0),
+              upper = c(Parms[1:6, 3], 1), niter = 5000)
+summary(BPU)
 #==================================================#
 #Goodness of fit and simulations
 source("IndividualStudies/BFit.R")
 SimBlag2014 <- BFit(ParmsBlag2014$par)
 SimBlag2014$errors
+SimBlag2014$R2all
+write.csv(SimBlag2014$Simulation, "../Manuscript/figure_data/SimBlag.csv", row.names = F)
 #=====================Save parameters
 parsAll <- rbind(parsAll, data.frame(Study = c("Blagodatskaya et al. (2014)"),
                                      Treatment = c("Glucose"),
@@ -1267,7 +1327,7 @@ ParmsBlag2014M$par
 source("IndividualStudies/BFitM.R")
 SimBlag2014M <- BFitM(ParmsBlag2014M$par)
 SimBlag2014M$errors
-
+write.csv(SimBlag2014M$Simulation, "../Manuscript/figure_data/SimBlagM.csv", row.names = F)
 ##Pirt model
 source_python("../PythonScripts/IndividualStudies/Blag2014ODESolvP.py")
 source_python("../PythonScripts/IndividualStudies/Pirt.py")
@@ -1286,6 +1346,7 @@ ParmsBlag2014P$par
 source("IndividualStudies/BFitP.R")
 SimBlag2014P <- BFitP(ParmsBlag2014P$par)
 SimBlag2014P$errors
+write.csv(SimBlag2014P$Simulation, "../Manuscript/figure_data/SimBlagP.csv", row.names = F)
 #No. of observations
 nt = SimBlag2014P$errors[6]
 #DEB model
@@ -1342,7 +1403,7 @@ ggplot(BData, aes(Time, DNA)) + geom_point(cex=6, pch=21, fill = "grey") + facet
 ##Parameters, which will be optimized (Initial guess, lower and upper bound) 
 Im0 = c(mean(parsAll$Im), min(parsAll$Im), max(parsAll$Im)) #1
 Km0 = c(mean(parsAll$Km), min(parsAll$Km), max(parsAll$Km)) #2
-yA0 = c(mean(parsAll$yA), min(parsAll$yA), max(parsAll$yA)) #3
+yA0 = c(mean(parsAll$yA[-10]), min(parsAll$yA), max(parsAll$yA)) #3
 Em0 = c(mean(parsAll$Em), min(parsAll$Em), max(parsAll$Em)) #4
 m0 = c(mean(parsAll$m), min(parsAll$m), max(parsAll$m))     #5
 g0 = c(mean(parsAll$g), min(parsAll$g), max(parsAll$g))     #6
@@ -1646,3 +1707,32 @@ ggplot(kecT, aes(EEm, kec)) + geom_line(aes(color = Legend, linetype = Legend)) 
   geom_hline(yintercept = 0.45, color = "red") + theme(legend.title = element_blank()) +
   ggtitle("C)")
   
+#==================Composite figure to sho in main text
+grid.arrange(
+  ##Substrate concentration
+  ggplot(HPData, aes(Time, S)) + geom_point(cex=6, pch=21, fill = "grey") +
+    theme_min + ylab(expression(paste({}^{14},"S (", mu, "mol(C) " , g^{-1}, "(DW))"))) + 
+    xlab("Time (days)") +
+    geom_line(data = HPSim, aes(Time, S), lwd = 1.2) +
+    ggtitle("A)"),
+  ##Cmic 14
+  ggplot(HPData, aes(Time, Flush)) + geom_point(cex=6, pch=21, fill = "grey") +
+    theme_min + ylab(expression(paste({}^{14}," CLC (", mu, "mol(C) " , g^{-1}, "(DW))"))) + 
+    xlab("Time (days)") +
+    geom_line(data = HPSim, aes(Time, Flush), lwd = 1.2) +
+    ggtitle("B)"),
+  ##Cumulative respiration
+  ggplot(HPData, aes(Time, CO2)) + geom_point(cex=6, pch=21, fill = "grey") +
+    theme_min + ylab(expression(paste({}^{14},"C", O[2]," (", mu, "mol(C) " , g^{-1}, "(DW))"))) + 
+    xlab("Time (days)") +
+    geom_line(data = HPSim, aes(Time, CO2), lwd = 1.2) +
+    ggtitle("C)"),
+  ##kec factor
+  ggplot(HPData, aes(Time, kec)) + geom_point(cex=6, pch=21, fill = "grey") +
+    theme_min + ylab(expression(paste(italic(k[ec])))) + xlab("Time (days)") + #ylim(0.20, 0.35) +
+    geom_line(data = HPSim, aes(Time, kec), lwd = 1.2) +
+    scale_y_continuous(limits = c(0.2, 0.5)) +
+    ggtitle("D)"),
+  nrow = 2
+)
+

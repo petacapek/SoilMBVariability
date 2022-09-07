@@ -2,10 +2,10 @@ ZObjectiveM<-function(x){
   #==========================Extracting sampling time from the dataset
   times <- as.numeric(ZData[, c("Time")])
   #==========================Defining initial conditions that are passed to model
-  B0 = ZData$PLFAinit[1]/x[5]
-  y0 <- c(ZData$Sinit[1], B0, 0)
+  B0u = ZData$PLFAinit[1]/x[5]
+  y0 <- c(ZData$Sinit[1], 0, 0, 0, B0u)
   #==========================Running simulation
-  Yhat <- Ziegler2005ODESolvM(Monod, x, times, y0)
+  Yhat <- Ziegler2005ODESolvM(MonodIso, x, times, y0)
   #==========================Calculating error that is minimized
   ##Measured data
   Y <- data.matrix(ZData[, c("S","CO2cumul", "PLFA")])

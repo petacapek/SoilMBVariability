@@ -33,7 +33,14 @@ HPFit<-function(x){
   ###normalized F
   Fnorm = sum(((Y - M)/W - (Yhat - Mhat)/What)^2, na.rm = T)
   
+  ###R2 for individual variables
+  R2all <- numeric()
+  for(i in 1:dim(Y)[2]){
+    R2all <- append(R2all, 1 - (sum((Y[, i] - Yhat[, i])^2, na.rm = T)/sum((Y[, i] - M[, i])^2, na.rm = T)))
+  }
+  names(R2all) <- colnames(Sim)[-5]
+  
   errors = c(R2 = R2, R2adj = R2adj, ll = ll, AIC = AIC, Fnorm = Fnorm, n = length(Y), p = length(x))
   
-  return(list(errors = errors, Simulation = Sim))
+  return(list(errors = errors, Simulation = Sim, R2all = R2all))
 }

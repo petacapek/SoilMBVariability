@@ -83,25 +83,27 @@ $DNA = MB \times k_{DNA},$ (S9)
 
 $ATP = MB \times k_{ATP},$ (S10)
 
-$PLFA = MB \times k_{PLFA}.$ (S11)
+$PLFA = MB \times k_{PLFA},$ (S11)
 
-In eqs. S8 - S11, symbols $CLC$, $k_{ec}$, $k_{DNA}$, $k_{ATP}$, and $k_{PLFA}$ denote chloroform-labile organic carbon, and conversion factors between $CLC$, DNA, ATP and PLFA, respectively.
+$W = MB \times W_{MB}.$ (S12)
+
+In eqs. S8 - S12, symbols $CLC$, $k_{ec}$, $k_{DNA}$, $k_{ATP}$, and $k_{PLFA}$ denote chloroform-labile organic carbon, and conversion factors between $CLC$, DNA, ATP and PLFA, respectively. Parameter $W_{MB}$ further denotes the C-1 mole to mass of total microbial community conversion factor.
 
 #### 1.1.2. Pirt model
 
 Pirt model is almost identical to Monod model. The only difference is the presence of maintenance. $MB$ has to maintain its integrity. Integrity maintenance requires energy, which is covered from $MB$ and results in $CO_2$ production ($R_{maintenance}$). $R_{maintenance}$ is proportional to $MB$ via the specific maintenance rate constant ($m$):
 
-$R_{maintenance} = MB \times m.$ (S12)
+$R_{maintenance} = MB \times m.$ (S13)
 
 The Pirt model is thus defined by following differential equations:
 
-$\frac{dS}{dt}=-uptake+death,$ (S13)
+$\frac{dS}{dt}=-uptake+death,$ (S14)
 
-$\frac{dMB}{dt}=growth-death-R_{maintenance},$ (S14)
+$\frac{dMB}{dt}=growth-death-R_{maintenance},$ (S15)
 
-$\frac{dCO_2}{dt}=R_{growth}+R_{maintenance}.$ (S15)
+$\frac{dCO_2}{dt}=R_{growth}+R_{maintenance}.$ (S16)
 
-Conversion factors between different proxy-parameters and $MB$ is defined the same way as in Monod model (eqs. S8 - S11).
+Conversion factors between different proxy-parameters and $MB$ is defined the same way as in Monod model (eqs. S8 - S12).
 
 The Monod, Pirt and two-pool biomass model defined in main text represent gradient of increasing complexity and number of model parameters.
 
@@ -109,79 +111,79 @@ The Monod, Pirt and two-pool biomass model defined in main text represent gradie
 
 #### 1.2.1. Sub-microbial model
 
-The isotope-specific sub-microbial model have eight pools represented by symbols ${}^{12}S$, ${}^{12}B$, ${}^{12}G$, ${}^{12}CO_{2}$, ${}^{14}S$, ${}^{14}B$, ${}^{14}G$ and ${}^{14}CO_{2}$. The left superscripts of the symbols denote either natural carbon isotope 12 or radioactive isotope 14. Sum of two isotopes in respective pool defines the total pool:
+The isotope-specific sub-microbial model have eight pools represented by symbols ${}^{12}S$, ${}^{12}B$, ${}^{12}G$, ${}^{12}CO_{2}$, ${}^{14}S$, ${}^{14}B$, ${}^{14}G$ and ${}^{14}CO_{2}$. The left superscripts of the symbols denote either natural carbon isotope 12 or radioactive isotope 14 (${}^{13}C$ labelled substrate is used instead of radioactive ${}^{14}C$ in study of Ziegler et al. (2005)). Sum of two isotopes in respective pool defines the total pool:
 
-$S = {}^{12}S + {}^{14}S,$ (S16)
+$S = {}^{12}S + {}^{14}S,$ (S17)
 
-$B = {}^{12}B + {}^{14}B,$ (S17)
+$B = {}^{12}B + {}^{14}B,$ (S18)
 
-$G = {}^{12}G + {}^{14}G,$ (S18)
+$G = {}^{12}G + {}^{14}G,$ (S19)
 
-$CO_2 = {}^{12}CO_2 + {}^{14}CO_2.$ (S19)
+$CO_2 = {}^{12}CO_2 + {}^{14}CO_2.$ (S20)
 
 The fluxes between the total pools are defined the same way as described in main text (section 2.1. Mathematical model). Isotope-specific fluxes are proportional to total fluxes by the relative abundance of the source pools. The relative abundance is defined in respect to radioactive carbon isotope as:
 
-$S_{at} = \frac{{}^{14}S}{{}^{14}S + {}^{12}S},$ (S20)
+$S_{at} = \frac{{}^{14}S}{{}^{14}S + {}^{12}S},$ (S21)
 
-$B_{at} = \frac{{}^{14}B}{{}^{14}B + {}^{12}B},$ (S21)
+$B_{at} = \frac{{}^{14}B}{{}^{14}B + {}^{12}B},$ (S22)
 
-$G_{at} = \frac{{}^{14}G}{{}^{14}G + {}^{12}G},$ (S22)
+$G_{at} = \frac{{}^{14}G}{{}^{14}G + {}^{12}G},$ (S23)
 
-$CO_{2at} = \frac{{}^{14}CO_2}{{}^{14}CO_2 + {}^{12}CO_2}.$ (S23)
+$CO_{2at} = \frac{{}^{14}CO_2}{{}^{14}CO_2 + {}^{12}CO_2}.$ (S24)
 
-Implementing eqs. S20 - S21 into eqs. 10 - 13 reported in main text, isotope-specific sub-microbial model is defined as:
+Implementing eqs. S21 - S24 into eqs. 10 - 13 reported in main text, isotope-specific sub-microbial model is defined as:
 
-$\frac{d^{12}S}{dt} = -U \times (1-S_{at}),$ (S24)
+$\frac{d^{12}S}{dt} = -U \times (1-S_{at}),$ (S25)
 
-$\frac{d^{12}G}{dt} = A_m \times [f \times (1-S_{at})-\frac{G}{G_m}\times (1-G_{at})],$ (S25)
+$\frac{d^{12}G}{dt} = A_m \times [f \times (1-S_{at})-\frac{G}{G_m}\times (1-G_{at})],$ (S26)
 
-$\frac{d^{12}B}{dt} = \left\{ \begin{array}{rcl}\mu \times B \times (1-G_{at}) & \mbox{for}& \mu \geq 0 \\\ \mu \times B \times (1+g) \times (1-B_{at}) & \mbox{for} & \mu < 0\end{array}\right.,$ (S26)
+$\frac{d^{12}B}{dt} = \left\{ \begin{array}{rcl}\mu \times B \times (1-G_{at}) & \mbox{for}& \mu \geq 0 \\\ \mu \times B \times (1+g) \times (1-B_{at}) & \mbox{for} & \mu < 0\end{array}\right.,$ (S27)
 
-$\frac{d^{12}CO_2}{dt} = \left\{ \begin{array}{rcl} R_{assimilatory} \times (1-S_{at}) + (R_{maintenance}+R_{growth}) \times (1-G_{at}) & \mbox{for}& \mu \geq 0 \\\ R_{assimilatory} \times (1-S_{at}) + R_{maintenance} \times (1-B_{at}) & \mbox{for} & \mu < 0\end{array}\right.,$ (S27)
+$\frac{d^{12}CO_2}{dt} = \left\{ \begin{array}{rcl} R_{assimilatory} \times (1-S_{at}) + (R_{maintenance}+R_{growth}) \times (1-G_{at}) & \mbox{for}& \mu \geq 0 \\\ R_{assimilatory} \times (1-S_{at}) + R_{maintenance} \times (1-B_{at}) & \mbox{for} & \mu < 0\end{array}\right.,$ (S28)
 
-$\frac{d^{14}S}{dt} = -U \times S_{at},$ (S28)
+$\frac{d^{14}S}{dt} = -U \times S_{at},$ (S29)
 
-$\frac{d^{14}G}{dt} = A_m \times (f \times S_{at}-\frac{G}{G_m}\times G_{at}),$(S29)
+$\frac{d^{14}G}{dt} = A_m \times (f \times S_{at}-\frac{G}{G_m}\times G_{at}),$(S30)
 
-$\frac{d^{14}B}{dt} = \left\{ \begin{array}{rcl}\mu \times B \times G_{at} & \mbox{for}& \mu \geq 0 \\\ \mu \times B \times (1+g) \times B_{at} & \mbox{for} & \mu < 0\end{array}\right.,$ (S30)
+$\frac{d^{14}B}{dt} = \left\{ \begin{array}{rcl}\mu \times B \times G_{at} & \mbox{for}& \mu \geq 0 \\\ \mu \times B \times (1+g) \times B_{at} & \mbox{for} & \mu < 0\end{array}\right.,$ (S31)
 
-$\frac{d^{14}CO_2}{dt} = \left\{ \begin{array}{rcl} R_{assimilatory} \times S_{at} + (R_{maintenance}+R_{growth}) \times G_{at} & \mbox{for}& \mu \geq 0 \\\ R_{assimilatory} \times S_{at} + R_{maintenance} \times B_{at} & \mbox{for} & \mu < 0\end{array}\right..$ (S31)
+$\frac{d^{14}CO_2}{dt} = \left\{ \begin{array}{rcl} R_{assimilatory} \times S_{at} + (R_{maintenance}+R_{growth}) \times G_{at} & \mbox{for}& \mu \geq 0 \\\ R_{assimilatory} \times S_{at} + R_{maintenance} \times B_{at} & \mbox{for} & \mu < 0\end{array}\right..$ (S32)
 
 #### 1.2.2. Monod model
 
 Isotope-specific Monod model is defined using same principles as defined for sub-microbial model. The model is thus defined by following differential equations:
 
-$\frac{d^{12}S}{dt}=-uptake \times (1-S_{at})+death\times (1-MB_{at}),$ (S32)
+$\frac{d^{12}S}{dt}=-uptake \times (1-S_{at})+death\times (1-MB_{at}),$ (S33)
 
-$\frac{d^{12}MB}{dt}=growth \times (1-S_{at})-death \times (1-MB_{at}),$ (S33)
+$\frac{d^{12}MB}{dt}=growth \times (1-S_{at})-death \times (1-MB_{at}),$ (S34)
 
-$\frac{d^{12}CO_2}{dt}=R_{growth} \times (1-S_{at}),$ (S34)
+$\frac{d^{12}CO_2}{dt}=R_{growth} \times (1-S_{at}),$ (S35)
 
-$\frac{d^{14}S}{dt}=-uptake \times S_{at}+death\times MB_{at},$ (S35)
+$\frac{d^{14}S}{dt}=-uptake \times S_{at}+death\times MB_{at},$ (S36)
 
-$\frac{d^{14}MB}{dt}=growth \times S_{at}-death \times MB_{at},$ (S36)
+$\frac{d^{14}MB}{dt}=growth \times S_{at}-death \times MB_{at},$ (S37)
 
-$\frac{d^{14}CO_2}{dt}=R_{growth} \times S_{at}.$ (S37)
+$\frac{d^{14}CO_2}{dt}=R_{growth} \times S_{at}.$ (S38)
 
-In eqs. S32 - S37, $MB_{at}$ is defined as:
+In eqs. S33 - S38, $MB_{at}$ is defined as:
 
-$MB_{at} = \frac{{}^{14}MB}{{}^{14}MB + {}^{12}MB}.$ (S38)
+$MB_{at} = \frac{{}^{14}MB}{{}^{14}MB + {}^{12}MB}.$ (S39)
 
 #### 1.2.3. Pirt model
 
 Isotope-specific Pirt model is defined by following differential equations:
 
-$\frac{d^{12}S}{dt}=-uptake \times (1-S_{at})+death\times (1-MB_{at}),$ (S39)
+$\frac{d^{12}S}{dt}=-uptake \times (1-S_{at})+death\times (1-MB_{at}),$ (S40)
 
-$\frac{d^{12}MB}{dt}=growth \times (1-S_{at})-death \times (1-MB_{at}) -R_{maintenance} \times (1-MB_{at}),$ (S40)
+$\frac{d^{12}MB}{dt}=growth \times (1-S_{at})-death \times (1-MB_{at}) -R_{maintenance} \times (1-MB_{at}),$ (S41)
 
-$\frac{d^{12}CO_2}{dt}=R_{growth} \times (1-S_{at}) + R_{maintenance} \times (1-MB_{at}),$ (S41)
+$\frac{d^{12}CO_2}{dt}=R_{growth} \times (1-S_{at}) + R_{maintenance} \times (1-MB_{at}),$ (S42)
 
-$\frac{d^{14}S}{dt}=-uptake \times S_{at}+death\times MB_{at},$ (S42)
+$\frac{d^{14}S}{dt}=-uptake \times S_{at}+death\times MB_{at},$ (S43)
 
-$\frac{d^{14}MB}{dt}=growth \times S_{at}-death \times MB_{at} -R_{maintenance} \times MB_{at},$ (S43)
+$\frac{d^{14}MB}{dt}=growth \times S_{at}-death \times MB_{at} -R_{maintenance} \times MB_{at},$ (S44)
 
-$\frac{d^{14}CO_2}{dt}=R_{growth} \times S_{at} + R_{maintenance} \times MB_{at}.$ (S43)
+$\frac{d^{14}CO_2}{dt}=R_{growth} \times S_{at} + R_{maintenance} \times MB_{at}.$ (S45)
 
 Notice, that no isotope discrimination is assumed in all models.
 
@@ -220,13 +222,309 @@ grid.arrange(
 
 ### 2.2. Sparling et al. (1988, 1990)
 
-```{r Sparling, echo=FALSE, fig.height=8, fig.width=8, message=FALSE, warning=FALSE, fig.cap="**Figure S1**: Correspondence between the model fit (solid lines) and observations reported in the study of Glanville et al. (2016). **A:** radiocative carbon in chloroform-labile organic carbon over time following either glucose (grey circles) or alanin (empty circle) addition. **B:** radiocative carbon in produced $$CO_2$$ over time following either glucose (grey circles) or alanin (empty circle) addition. **C:** conversion factor between chloroform-labile organic carbon and total soil microbial biomass estimated as a residual fraction of radioactive carbon in microbial biomass that is not released by chloroform vapors. See the main text section 2.1.1. Mathematical model for details about the model."}
+```{r Sparling, echo=FALSE, fig.height=8, fig.width=8, message=FALSE, warning=FALSE, fig.cap="**Figure S2**: Correspondence between the model fit and observations across 13 different soils reported in the studies of Sparling et al. (1988, 1990). Four measured variables are divided into four boxes. Solid line represents 1:1 correspondence between observations and model predictions. Notice that different boxes have different y and x axis scales."}
 #Observations
 SData = read.csv("../SoilMBVariabilityData/Sparling1990.csv")
 #Simulations
 SSim <- read.csv("../Manuscript/figure_data/SimSparling.csv") 
 
+my_labeller <- as_labeller(c(CO2="{}^{14}~CO[2]", Flush="{}^{14}~CLC", kec="k[ec]", S="{}^{14}~S"),
+                           default = label_parsed)
 
+ggplot(SSim, aes(Measured, Predicted)) + geom_point(cex = 6, pch = 21, fill = "grey") +
+  theme_min + facet_wrap(~Variable, scales = "free", labeller = my_labeller) +
+  geom_abline(intercept = 0, slope = 1) +
+  xlab("Observations") + ylab("Sub-microbial model predictions")
+
+```
+
+### 2.3. Šantrůčková et al. (2004)
+
+```{r Hasan, echo=FALSE, fig.height=8, fig.width=8, message=FALSE, warning=FALSE, fig.cap="**Figure S3**: Correspondence between the model fit (solid lines) and observations reported in the studies of Šantrůčková et al. (2004). Four measured variables are divided into four boxes (A - D). Notice that different boxes have different y and x axis scales."}
+#Observations
+HPData = read.csv("../SoilMBVariabilityData/Santruckova2004.csv")
+#Simulations
+HPSim <- read.csv("../Manuscript/figure_data/SimHasan.csv") 
+
+grid.arrange(
+##Substrate concentration
+ggplot(HPData, aes(Time, S)) + geom_point(cex=6, pch=21, fill = "grey") +
+  theme_min + ylab(expression(paste({}^{14},"S (", mu, "mol(C) " , g^{-1}, "(DW))"))) + 
+  xlab("Time (days)") +
+  geom_line(data = HPSim, aes(Time, S), lwd = 1.2) +
+  ggtitle("A)"),
+##Cmic 14
+ggplot(HPData, aes(Time, Flush)) + geom_point(cex=6, pch=21, fill = "grey") +
+  theme_min + ylab(expression(paste({}^{14}," CLC (", mu, "mol(C) " , g^{-1}, "(DW))"))) + 
+  xlab("Time (days)") +
+  geom_line(data = HPSim, aes(Time, Flush), lwd = 1.2) +
+  ggtitle("B)"),
+##Cumulative respiration
+ggplot(HPData, aes(Time, CO2)) + geom_point(cex=6, pch=21, fill = "grey") +
+  theme_min + ylab(expression(paste({}^{14},"C", O[2]," (", mu, "mol(C) " , g^{-1}, "(DW))"))) + 
+  xlab("Time (days)") +
+  geom_line(data = HPSim, aes(Time, CO2), lwd = 1.2) +
+  ggtitle("C)"),
+##kec factor
+ggplot(HPData, aes(Time, kec)) + geom_point(cex=6, pch=21, fill = "grey") +
+  theme_min + ylab(expression(paste(italic(k[ec])))) + xlab("Time (days)") + #ylim(0.20, 0.35) +
+  geom_line(data = HPSim, aes(Time, kec), lwd = 1.2) +
+  scale_y_continuous(limits = c(0.2, 0.5)) +
+  ggtitle("D)"),
+nrow = 2
+)
+
+```
+
+### 2.4. Bremer and van Kessel (1990)
+
+```{r Bremer, echo=FALSE, fig.height=12, fig.width=8, message=FALSE, warning=FALSE, fig.cap="**Figure S4**: Correspondence between the model fit (solid lines) and observations reported in the study of Bremer and van Kessel (1990). Four measured variables are divided into subplots boxes (A - D). Each subplot is composed of three different boxes, which represent three different treatment - HC - high glucose addition, HCHN - high glucose and high $(NH_{4})_{2} SO_{4}$, LC - low glucose addition. The model parameters are estimated across the treatments. The predictions are not shown for LC treatment due to low correspondence between measured and predicted $k_{ec}$. Notice that different boxes have different y and x axis scales."}
+#Observations
+BKData = read.csv("../SoilMBVariabilityData/BremerKessel1990.csv")
+#Simulations
+BKSim <- read.csv("../Manuscript/figure_data/SimBremer.csv") 
+
+grid.arrange(
+  ##Substrate concentration
+ggplot(BKData, aes(Time, S)) + geom_point(cex=6, pch=21, fill = "grey") +
+  theme_min + ylab(expression(paste({}^{14},"S (", mu, "mol(C) ", g^{-1}, "(DW))"))) + xlab("Time (days)") +
+  geom_line(data = BKSim, aes(Time, S), lwd = 1.5) +
+  facet_wrap(~Treatment, scales="free") + ggtitle("A)"),
+ggplot(BKData, aes(Time, Cmic14)) + geom_point(cex=6, pch=21, fill = "grey") +
+  theme_min + ylab(expression(paste({}^{14}, "CLC (", mu, "mol(C) ", g^{-1}, "(DW))"))) + xlab("Time (days)") +
+  geom_line(data = BKSim, aes(Time, Cmic14), lwd = 1.5) +
+  facet_wrap(~Treatment, scales="free") + ggtitle("B)"),
+##Cumulative respiration
+ggplot(BKData, aes(Time, CO214cumul)) + geom_point(cex=6, pch=21, fill = "grey") +
+  theme_min + 
+  ylab(expression(paste({}^{14},"C", O[2], " (", mu, "mol(C) ", g^{-1}, "(DW))"))) + xlab("Time (days)") +
+  geom_line(data = BKSim, aes(Time, CO2), lwd = 1.5) +
+  facet_wrap(~Treatment, scales="free") + ggtitle("C)"),
+#kec factor
+ggplot(BKData, aes(Time, kec)) + geom_point(cex=6, pch=21, fill = "grey") +
+  theme_min + ylab(expression(paste(italic(k[ec])))) + xlab("Time (days)") +
+  geom_line(data = BKSim, aes(Time, kec), lwd = 1.5) +
+  facet_grid(.~Treatment) + ggtitle("D)"),
+nrow = 4
+)
+```
+
+### 2.5. Ziegler et al. (2005)
+
+```{r Ziegler, echo=FALSE, fig.height=8, fig.width=8, message=FALSE, warning=FALSE, fig.cap="**Figure S5**: Correspondence between the fit of three microbially-explicit models (Sub-microbial - solid black line, Monod - dark grey dashed line, and Pirt - light grey solid line) and observations reported in the study of Ziegler et al. (2005). Three measured variables are divided into three subplots boxes (A - C). Notice that different plots have different y and x axis scales."}
+
+ZData = read.csv("../SoilMBVariabilityData/Ziegler2005.csv")
+Zsim = read.csv("../Manuscript/figure_data/SimZiegler.csv")
+ZsimP = read.csv("../Manuscript/figure_data/SimZieglerP.csv")
+ZsimM = read.csv("../Manuscript/figure_data/SimZieglerM.csv")
+
+grid.arrange(
+  ##Substrate concentration
+ggplot(ZData, aes(Time, S)) + geom_point(cex=6, pch=21, fill = "grey") +
+  theme_min + ylab(expression(paste({}^{13},"S (", mu, "mol(C) ", g^{-1}, "(DW))"))) + xlab("Time (days)") +
+  geom_line(data = Zsim, aes(Time, S), lwd = 1.5) +
+  geom_line(data = ZsimP, aes(Time, S), lwd = 1.5, color = "grey") +
+  geom_line(data = ZsimM, aes(Time, S), lwd = 1.5, color = "grey30", lty = 2) +
+  ggtitle("A)"),
+##PLFA
+ggplot(ZData, aes(Time, PLFA)) + geom_point(cex=6, pch=21, fill = "grey") +
+  theme_min + ylab(expression(paste({}^{13}~C[PLFA], " (", mu, "mol(C) ", g^{-1}, "(DW))"))) + xlab("Time (days)") +
+  geom_line(data = Zsim, aes(Time, PLFA), lwd = 1.5) +
+  geom_line(data = ZsimP, aes(Time, PLFA), lwd = 1.5, color = "grey") +
+  geom_line(data = ZsimM, aes(Time, PLFA), lwd = 1.5, color = "grey30", lty = 2) +
+  ggtitle("B)"),
+##Cumulative respiration
+ggplot(ZData, aes(Time, CO2cumul)) + geom_point(cex=6, pch=21, fill = "grey") +
+  theme_min + ylab(expression(paste({}^{13}~CO[2], " (", mu, "mol(C) ", g^{-1}, "(DW))"))) + xlab("Time (days)") +
+  geom_line(data = Zsim, aes(Time, CO2), lwd = 1.5) +
+  geom_line(data = ZsimP, aes(Time, CO2), lwd = 1.5, color = "grey") +
+  geom_line(data = ZsimM, aes(Time, CO2), lwd = 1.5, color = "grey30", lty = 2) +
+  ggtitle("C)"),
+nrow = 2
+)
+
+```
+
+### 2.6. Marstorp and Witter (1999)
+
+```{r Marstorp, echo=FALSE, fig.height=8, fig.width=8, message=FALSE, warning=FALSE, fig.cap="**Figure S6**: Correspondence between the fit of three microbially-explicit models (Sub-microbial - solid black line, Monod - dark grey dashed line, and Pirt - light grey solid line) and observations reported in the study of Martsorp and Witter (1999). Four measured variables are divided into four subplots (A - D). Notice that different plots have different y and x axis scales."}
+
+MData = read.csv("../SoilMBVariabilityData/Marstorp1999.csv")
+Msim = read.csv("../Manuscript/figure_data/SimMarstorp.csv")
+MsimP = read.csv("../Manuscript/figure_data/SimMarstorpP.csv")
+MsimM = read.csv("../Manuscript/figure_data/SimMarstorpM.csv")
+
+grid.arrange(
+  ##Substrate concentration
+ggplot(MData, aes(Time, S)) + geom_point(cex=6, pch=21, fill = "grey") +
+  theme_min + ylab(expression(paste("S (", mu, "mol(C) ", g^{-1}, "(DW))"))) + xlab("Time (days)") +
+  geom_line(data = Msim, aes(Time, S), lwd = 1.5) +
+  geom_line(data = MsimP, aes(Time, S), lwd = 1.5, color = "grey") +
+  geom_line(data = MsimM, aes(Time, S), lwd = 1.5, color = "grey30", lty = 2) +
+  ggtitle("A)"),
+##Cmic
+ggplot(MData, aes(Time, Flush)) + geom_point(cex=6, pch=21, fill = "grey") +
+  theme_min + ylab(expression(paste("CLC (", mu, "mol(C) ", g^{-1}, "(DW))"))) + xlab("Time (days)") +
+  ylim(0, 15) + geom_line(data = Msim, aes(Time, Flush), lwd = 1.5) +
+  geom_line(data = MsimP, aes(Time, Flush), lwd = 1.5, color = "grey") +
+  geom_line(data = MsimM, aes(Time, Flush), lwd = 1.5, color = "grey30", lty = 2) +
+  ggtitle("B)"),
+##DNA
+ggplot(MData, aes(Time, DNA)) + geom_point(cex=6, pch=21, fill = "grey") +
+  theme_min + ylab(expression(paste("DNA (", mu, "mol(C) ", g^{-1}, "(DW))"))) + xlab("Time (days)") +
+  geom_line(data = Msim, aes(Time, DNA), lwd = 1.5) +
+  geom_line(data = MsimP, aes(Time, DNA), lwd = 1.5, color = "grey") +
+  geom_line(data = MsimM, aes(Time, DNA), lwd = 1.5, color = "grey30", lty = 2) +
+  ggtitle("C)"),
+##Cumulative respiration
+ggplot(MData, aes(Time, CO212cumul)) + geom_point(cex=6, pch=21, fill = "grey") +
+  theme_min + ylab(expression(paste(CO[2], " (", mu, "mol(C) ", g^{-1}, "(DW))"))) + xlab("Time (days)") +
+  geom_line(data = Msim, aes(Time, CO2), lwd = 1.5) +
+  geom_line(data = MsimP, aes(Time, CO2), lwd = 1.5, color = "grey") +
+  geom_line(data = MsimM, aes(Time, CO2), lwd = 1.5, color = "grey30", lty = 2) +
+  ggtitle("D)"),
+nrow = 2
+)
+
+```
+
+### 2.7. Tsai et al. (1997)
+
+```{r Tsai, echo=FALSE, fig.height=10, fig.width=8, message=FALSE, warning=FALSE, fig.cap="**Figure S7**: Correspondence between the fit of three microbially-explicit models (Sub-microbial - solid black line, Monod - dark grey dashed line, and Pirt - light grey solid line) and observations reported in the study of Tsai et al. (1997). Three measured variables are divided into three subplots (A - C). Each subplot is divided into two boxes representing two different treatments - HG - high glucose addition, and LG - low glucose addition. The model parameters are estimated across the treatments. Notice that different plots have different y and x axis scales."}
+
+TData = read.csv("../SoilMBVariabilityData/Tsai1997.csv")
+Tsim = read.csv("../Manuscript/figure_data/SimTsai.csv")
+TsimP = read.csv("../Manuscript/figure_data/SimTsaiP.csv")
+TsimM = read.csv("../Manuscript/figure_data/SimTsaiM.csv")
+
+grid.arrange(
+  ##Substrate concentration
+ggplot(TData, aes(Time, Cmic)) + geom_point(cex=6, pch=21, fill = "grey") +
+  theme_min + ylab(expression(paste("CLC (", mu, "mol(C) ", g^{-1}, "(DW))"))) + xlab("Time (days)") +
+  geom_line(data = Tsim, aes(Time, Flush), lwd = 1.5) +
+  geom_line(data = TsimP, aes(Time, Flush), lwd = 1.5, color = "grey") +
+  geom_line(data = TsimM, aes(Time, Flush), lwd = 1.5, color = "grey30", lty = 2) +
+  facet_wrap(~Treatment) +
+  ggtitle("A)"),
+##Cmic
+ggplot(TData, aes(Time, ATP*1000)) + geom_point(cex=6, pch=21, fill = "grey") +
+  theme_min + ylab(expression(paste("ATP (nmol(C) ", g^{-1}, "(DW))"))) + xlab("Time (days)") +
+  geom_line(data = Tsim, aes(Time, ATP*1000), lwd = 1.5) +
+  geom_line(data = TsimP, aes(Time, ATP*1000), lwd = 1.5, color = "grey") +
+  geom_line(data = TsimM, aes(Time, ATP*1000), lwd = 1.5, color = "grey30", lty = 2) +facet_wrap(~Treatment) +
+  ggtitle("B)"),
+##Cumulative respiration
+ggplot(TData, aes(Time, CO2cumul)) + geom_point(cex=6, pch=21, fill = "grey") +
+  theme_min + ylab(expression(paste(CO[2], " (", mu, "mol(C) ", g^{-1}, "(DW))"))) + xlab("Time (days)") +
+  geom_line(data = Tsim, aes(Time, CO2), lwd = 1.5) +
+  geom_line(data = TsimP, aes(Time, CO2), lwd = 1.5, color = "grey") +
+  geom_line(data = TsimM, aes(Time, CO2), lwd = 1.5, color = "grey30", lty = 2) +
+  facet_wrap(~Treatment) +
+  ggtitle("C)"),
+nrow = 3
+)
+
+
+```
+
+### 2.8. Joergensen and Raubuch (2002)
+
+```{r Joergensen, echo=FALSE, fig.height=8, fig.width=8, message=FALSE, warning=FALSE, fig.cap="**Figure S8**: Correspondence between the fit of three microbially-explicit models (Sub-microbial - solid black line, Monod - dark grey dashed line, and Pirt - light grey solid line) and observations reported in the study of Joergensen and Raubuch (2002). Three measured variables are divided into three subplots (A - C). Notice that different plots have different y and x axis scales."}
+
+JData = read.csv("../SoilMBVariabilityData/Joergensen2002.csv")
+Jsim = read.csv("../Manuscript/figure_data/SimJoerg.csv")
+JsimP = read.csv("../Manuscript/figure_data/SimJoergP.csv")
+JsimM = read.csv("../Manuscript/figure_data/SimJoergM.csv")
+
+grid.arrange(
+  ##Substrate concentration
+ggplot(JData, aes(Time, S)) + geom_point(cex=6, pch=21, fill = "grey") +
+  theme_min + ylab(expression(paste(CO[2], " (", mu, "mol(C) ", g^{-1}, "(DW))"))) + xlab("Time (days)") +
+  geom_line(data = Jsim, aes(Time, S), lwd = 1.5) +
+  geom_line(data = JsimP, aes(Time, S), lwd = 1.5, color = "grey") +
+  geom_line(data = JsimM, aes(Time, S), lwd = 1.5, color = "grey30", lty = 2) +
+  ggtitle("A)"),
+  ##CLC
+ggplot(JData, aes(Time, Cmic)) + geom_point(cex=6, pch=21, fill = "grey") +
+  theme_min + ylab(expression(paste("CLC (", mu, "mol(C) ", g^{-1}, "(DW))"))) + xlab("Time (days)") +
+  geom_line(data = Jsim, aes(Time, Flush), lwd = 1.5) +
+  geom_line(data = JsimP, aes(Time, Flush), lwd = 1.5, color = "grey") +
+  geom_line(data = JsimM, aes(Time, Flush), lwd = 1.5, color = "grey30", lty = 2) +
+  ggtitle("B)"),
+##Cmic
+ggplot(JData, aes(Time, ATP*1000)) + geom_point(cex=6, pch=21, fill = "grey") +
+  theme_min + ylab(expression(paste("ATP (nmol(C) ", g^{-1}, "(DW))"))) + xlab("Time (days)") +
+  geom_line(data = Jsim, aes(Time, ATP*1000), lwd = 1.5) +
+  geom_line(data = JsimP, aes(Time, ATP*1000), lwd = 1.5, color = "grey") +
+  geom_line(data = JsimM, aes(Time, ATP*1000), lwd = 1.5, color = "grey30", lty = 2)  +  ggtitle("C)"),
+nrow = 2
+)
+
+```
+
+### 2.9. Nannipieri et al. (1977)
+
+```{r Nannipieri, echo=FALSE, fig.height=10, fig.width=8, message=FALSE, warning=FALSE, fig.cap="**Figure S9**: Correspondence between the fit of three microbially-explicit models (Sub-microbial - solid black line, Monod - dark grey dashed line, and Pirt - light grey solid line) and observations reported in the study of Nannipieri et al. (1977). Three measured variables are divided into three subplots (A - C). Each subplot is further divided into three boxes representing three different treatments - A - high glucose addition with N and P; B - high glucose addition with N; C - low glucose addition. The model parameters are estimated across the treatments. Notice that different plots have different y and x axis scales."}
+
+NData = read.csv("../SoilMBVariabilityData/Nannipieri1977.csv")
+Nsim = read.csv("../Manuscript/figure_data/SimNannipieri.csv")
+NsimP = read.csv("../Manuscript/figure_data/SimNannipieriP.csv")
+NsimM = read.csv("../Manuscript/figure_data/SimNannipieriM.csv")
+
+grid.arrange(
+  ##Substrate concentration
+ggplot(NData, aes(Time, W/1000)) + geom_point(cex=6, pch=21, fill = "grey") +
+  theme_min + ylab(expression(paste("Biomass (mg ", g^{-1}, "(DW))"))) + xlab("Time (days)") +
+  geom_line(data = Nsim, aes(Time, W/1000), lwd = 1.5) +
+  geom_line(data = NsimP, aes(Time, W/1000), lwd = 1.5, color = "grey") +
+  geom_line(data = NsimM, aes(Time, W/1000), lwd = 1.5, color = "grey30", lty = 2) +
+  facet_wrap(~Treatment) +
+  ggtitle("A)"),
+  ##ATP
+ggplot(NData, aes(Time, ATP*1000)) + geom_point(cex=6, pch=21, fill = "grey") +
+  theme_min + ylab(expression(paste("ATP (nmol(C) ", g^{-1}, "(DW))"))) + xlab("Time (days)") +
+  geom_line(data = Nsim, aes(Time, ATP*1000), lwd = 1.5) +
+  geom_line(data = NsimP, aes(Time, ATP*1000), lwd = 1.5, color = "grey") +
+  geom_line(data = NsimM, aes(Time, ATP*1000), lwd = 1.5, color = "grey30", lty = 2) + facet_wrap(~Treatment) +
+  ggtitle("B)"),
+##CO2
+ggplot(NData, aes(Time, CO2)) + geom_point(cex=6, pch=21, fill = "grey") +
+  theme_min + ylab(expression(paste(CO[2], " (", mu, "mol(C) ", g^{-1}, "(DW))"))) + xlab("Time (days)") +
+  geom_line(data = Nsim, aes(Time, CO2), lwd = 1.5) +
+  geom_line(data = NsimP, aes(Time, CO2), lwd = 1.5, color = "grey") +
+  geom_line(data = NsimM, aes(Time, CO2), lwd = 1.5, color = "grey30", lty = 2)  + 
+  facet_wrap(~Treatment) + ggtitle("C)"),
+nrow = 3
+)
+```
+
+### 2.10. Blagodatskaya et al. (2014)
+
+```{r Blagodatskaya, echo=FALSE, fig.height=8, fig.width=8, message=FALSE, warning=FALSE, fig.cap="**Figure S10**: Correspondence between the fit of three microbially-explicit models (Sub-microbial - solid black line, Monod - dark grey dashed line, and Pirt - light grey solid line) and observations reported in the study of Blagodatskaya et al. (2014). Two measured variables are divided into two subplots (A - B). Each subplot is further divided into two boxes representing two different soils - Rhizosphere and bulk soil. The model parameters are estimated across the soils. Notice that different plots have different y and x axis scales."}
+
+BData = read.csv("../SoilMBVariabilityData/Blagodatskaya2014.csv")
+Bsim = read.csv("../Manuscript/figure_data/SimBlag.csv")
+BsimP = read.csv("../Manuscript/figure_data/SimBlagP.csv")
+BsimM = read.csv("../Manuscript/figure_data/SimBlagM.csv")
+
+grid.arrange(
+  ##DNA
+ggplot(BData, aes(Time, DNA)) + geom_point(cex=6, pch=21, fill = "grey") +
+  theme_min + ylab(expression(paste("DNA (nmol(C) ", g^{-1}, "(DW))"))) + xlab("Time (days)") +
+  geom_line(data = Bsim, aes(Time, DNA), lwd = 1.5) +
+  geom_line(data = BsimP, aes(Time, DNA), lwd = 1.5, color = "grey") +
+  geom_line(data = BsimM, aes(Time, DNA), lwd = 1.5, color = "grey30", lty = 2) +
+  facet_wrap(~Treatment) +
+  ggtitle("A)"),
+  ##CO2
+ggplot(BData, aes(Time, CO2)) + geom_point(cex=6, pch=21, fill = "grey") +
+  theme_min + ylab(expression(paste(CO[2], " (", mu, "mol(C) ", g^{-1}, "(DW))"))) + xlab("Time (days)") +
+  geom_line(data = Bsim, aes(Time, CO2), lwd = 1.5) +
+  geom_line(data = BsimP, aes(Time, CO2), lwd = 1.5, color = "grey") +
+  geom_line(data = BsimM, aes(Time, CO2), lwd = 1.5, color = "grey30", lty = 2)  + 
+  facet_wrap(~Treatment) + ggtitle("B)"),
+nrow = 2
+)
 
 ```
 
@@ -266,6 +564,6 @@ SSim <- read.csv("../Manuscript/figure_data/SimSparling.csv")
 
 ## 4. Supplementary figures
 
-```{r Figure1, out.height = "600px", out.width='900px', echo=F, message=FALSE, fig.cap="**Figure S1:** Prisma flow diagram of the publications selection procedure."}
+```{r Figure1, out.height = "600px", out.width='900px', echo=F, message=FALSE, fig.cap="**Figure S11:** Prisma flow diagram of the publications selection procedure."}
 knitr::include_graphics("../Manuscript/prismaMBData.pdf")
 ```

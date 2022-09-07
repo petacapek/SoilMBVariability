@@ -3,12 +3,14 @@ ZFit<-function(x){
   times <- as.numeric(ZData[, c("Time")])
   timesSim <- seq(0, max(times), length.out = 100)
   #==========================Defining initial conditions that are passed to model
-  E0 = x[4]*x[5]/x[1]/x[3]
-  X10 = ZData$PLFAinit[1]/(x[8] + x[7]*E0)
-  y0 <- c(ZData$Sinit[1], E0, X10, 0)
+  ##Eu at time zero is set to equal to m*Em/Im/yA so it can meet the maintenance costs
+  Eu0 = x[4]*x[5]/x[1]/x[3]
+  ##X1u is the initial chloroform labile C with Eu subtracted and corrected for incomplete extraction
+  X1u0 = ZData$PLFAinit[1]/x[7]
+  y0 <- c(ZData$Sinit[1], 0, 0, 0, Eu0, X1u0)
   #==========================Running simulation
-  Yhat <- Ziegler2005ODESolv(DEBmodel, x, times, y0)
-  Sim <- as.data.frame(Ziegler2005ODESolv(DEBmodel, x, timesSim, y0))
+  Yhat <- Ziegler2005ODESolv(DEBmodelIso, x, times, y0)
+  Sim <- as.data.frame(Ziegler2005ODESolv(DEBmodelIso, x, timesSim, y0))
   colnames(Sim) <- c("S", "CO2", "PLFA")
   Sim$Time <- timesSim
   #==========================Calculating error that is minimized
@@ -31,7 +33,14 @@ ZFit<-function(x){
   ###normalized F
   Fnorm = sum(((Y - M)/W - (Yhat - Mhat)/What)^2, na.rm = T)
   
+  ###R2 for individual variables
+  R2all <- numeric()
+  for(i in 1:dim(Y)[2]){
+    R2all <- append(R2all, 1 - (sum((Y[, i] - Yhat[, i])^2, na.rm = T)/sum((Y[, i] - M[, i])^2, na.rm = T)))
+  }
+  names(R2all) <- colnames(Sim)[1:3]
+  
   errors = c(R2 = R2, R2adj = R2adj, ll = ll, AIC = AIC, Fnorm = Fnorm, n = length(Y[!is.na(Y)]), p = length(x))
   
-  return(list(errors = errors, Simulation = Sim))
+  return(list(errors = errors, Simulation = Sim, R2all = R2all))
 }
