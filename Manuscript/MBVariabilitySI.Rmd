@@ -451,7 +451,7 @@ ggplot(JData, aes(Time, Cmic)) + geom_point(cex=6, pch=21, fill = "grey") +
   geom_line(data = JsimP, aes(Time, Flush), lwd = 1.5, color = "grey") +
   geom_line(data = JsimM, aes(Time, Flush), lwd = 1.5, color = "grey30", lty = 2) +
   ggtitle("B)"),
-##Cmic
+##ATP
 ggplot(JData, aes(Time, ATP*1000)) + geom_point(cex=6, pch=21, fill = "grey") +
   theme_min + ylab(expression(paste("ATP (nmol(C) ", g^{-1}, "(DW))"))) + xlab("Time (days)") +
   geom_line(data = Jsim, aes(Time, ATP*1000), lwd = 1.5) +
@@ -533,7 +533,7 @@ nrow = 2
 **Table S1:** Parameters of mathematical model described in section 2.1.1. Mathematical model in the main text that were used to fit data shown on Fig. 1A.
 
 | Parameter                                 | Value                 | Unit                         |
-|--------------------------------|------------------|----------------------|
+|-------------------------------------------|-----------------------|------------------------------|
 | Basal biomass (B)                         | 0.14                  | mg                           |
 | z ($\frac{I_m \times y_A}{G_m}$)          | 1.25                  | unitless                     |
 | Growth costs (g)                          | 0.21                  | $mg(C)~mg(B)^{-1}$           |

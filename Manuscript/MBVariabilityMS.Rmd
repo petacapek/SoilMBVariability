@@ -12,6 +12,42 @@ editor_options:
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
+```{r libraries and ggplot theme, echo=FALSE, warning=FALSE, message=FALSE}
+#Libraries
+library(ggplot2)
+library(dplyr)
+library(reshape)
+library(minpack.lm)
+library(bbmle)
+library(deSolve)
+library(FME)
+library(DEoptim)
+library(ABCoptim)
+library(rcompanion)
+library(optimx)
+library(reticulate)
+library(gridExtra)
+#ggplot theme
+theme_min<-theme(axis.text.x=element_text(vjust=0.2, size=18, colour="black"),
+                 axis.text.y=element_text(hjust=0.2, size=18, colour="black"),
+                 axis.title=element_text(size=18, colour="black"),
+                 axis.line=element_line(size=0.5, colour="black"),
+                 strip.text=element_text(size=18, face="bold"),
+                 axis.ticks=element_line(size=1, colour="black"),
+                 #axis.ticks.length=unit(-0.05, "cm"),
+                 panel.background=element_rect(colour="black", fill="white"),
+                 panel.grid=element_line(linetype=0),
+                 legend.text=element_text(size=14, colour="black"),
+                 legend.title=element_text(size=14, colour="black"),
+                 legend.position=c("right"),
+                 legend.key.size=unit(1, "cm"),
+                 strip.background=element_rect(fill="grey98", colour="black"),
+                 legend.key=element_rect(fill="white", size=1.2),
+                 legend.spacing=unit(0.5, "cm"),
+                 plot.title=element_text(size=18, face="bold", hjust=-0.05))
+
+```
+
 ## 1. Introduction
 
 Macromolecular and elemental composition of cells of single-species microbial communities is known to vary significantly [@Hanegraaf2001; @Makino2003; @herbert1961]. As quoted by Denis Herbert, "Such a statement as 'the ribonucleic acid content of Bacillus cereus is 16.2%' is by itself as incomplete and misleading as the statement 'the boiling-point of water is 70°C'.". Variability in cell composition is primarily associated with changes in specific growth rate (Fig. 1A, @Hanegraaf2001; @Herbert1961; @Makino2003). To grow fast, microbial cells require several macromolecules and metabolites with unique elemental composition [@Vrede2004; @Franklin2011] that are transformed into various cell components or perform the transformation. Typical example of macromolecule mediating growth is ribosomal RNA, which translates genetic code into a sequence of amino acids. Because the rate of translation per unit of one ribosome is constant, increase in growth rate can be achieved only by increasing the ribosomal RNA content [@Vrede2004; @Franklin2011]. For that reason, ribosomal RNA content typically increases with increasing specific growth rate (Fig. 1A, @Hanegraaf2001; @Makino2003; @Herbert1961).
@@ -108,11 +144,13 @@ $k_{PLFA} = \frac{p_B}{G + 1}.$ (17)
 
 According to @Hanegraaf2001, DNA is only part of pool $B$ so Eq. 15 contains only parameter $i_{B}$ defining the relative abundance of DNA in $B$. Because PLFA are produced only to form cell membranes, we assume they belong only to pool $B$ similarly as DNA.
 
+In addition, @nannipieri1978 report mass of microbial biomass ($W$) along with its ATP content. The total mass of microbial community results from the sum of masses of both pools - $W_B$ and $W_G$.
+
 ### 2.2. Data collection
 
-To test the accuracy of the theoretical background, the model defined above was confronted with data published in the literature. Because the aim of the study is to analyze the relationship between the growth rate and composition of soil microbial biomass, we searched for studies in which the growth rate or composition of microbial biomass was reported to change. The studies were searched on the Web of Science, PubMed and Scopus (Fig. S1) using the keywords 'soil', 'microbial biomass', 'growth', 'carbon', 'ATP', 'DNA', 'PLFA', 'radiolabel', 'isotope', 'substrate addition', and their combinations. This search resulted in 3924 indexed studies. We also searched in citations of four most relevant publications [@bremer1990; @glanville2016; @Marstorp1999; @nguyen2001] resulting in additional (partially overlapping) 343 studies. These studies were analyzed and filtered according to following criteria: (i) the selected experiments had to be short-term to make sure the death rate and extracellular enzyme production can be neglected in mass balance, (ii) the data had to be available for more than three different time points, (iii) at least four different C pools or variables had to be measured and ideally two of them are different biomass proxies, and (iv) initial conditions had to be well defined (Fig. S1, i.e. note that several studies did not comply with more than one criteria). Applying these criteria, only seven eligible studies were selected and further analyzed @bremer1990; @glanville2016; @joergensen2002; @Marstorp1999; @santruckova2004; @tsai1997; @nannipieri1978. Due to the low number of eligible studies, four exceptions were made. Study of @blagodatskaya2014 was selected regardless the criterion (iii) to increase the number of studies reporting change of DNA concentration over time following saturating concentration of organic substrate. Study of @ziegler2005 was again selected regardless the criterion (iii) because it is the only study reporting change of PLFA concentration over time with sufficient temporal resolution. Studies of @sparling1988 and @Sparling1990a were selected regardless the criterion (ii) because they report large number of $k_{ec}$ estimates for soils with reasonably well defined initial conditions.
+To test the accuracy of the theoretical background, the model defined above was confronted with data published in the literature. Because the aim of the study is to analyze the relationship between the growth rate and composition of soil microbial biomass, we searched for studies in which the growth rate or composition of microbial biomass was reported to change. The studies were searched on the Web of Science, PubMed and Scopus (Fig. S11) using the keywords 'soil', 'microbial biomass', 'growth', 'carbon', 'ATP', 'DNA', 'PLFA', 'radiolabel', 'isotope', 'substrate addition', and their combinations. This search resulted in 3924 indexed studies. We also searched in citations of four most relevant publications [@bremer1990; @glanville2016; @Marstorp1999; @nguyen2001] resulting in additional (partially overlapping) 343 studies. These studies were analyzed and filtered according to following criteria: (i) the selected experiments had to be short-term to make sure the death rate and extracellular enzyme production can be neglected in mass balance, (ii) the data had to be available for more than three different time points, (iii) at least three different C pools or variables had to be measured and ideally two of them are different biomass proxies, and (iv) initial conditions had to be well defined (Fig. S11, i.e. note that several studies did not comply with more than one criteria). Applying these criteria, only seven eligible studies were selected and further analyzed @bremer1990; @glanville2016; @joergensen2002; @Marstorp1999; @santruckova2004; @tsai1997; @nannipieri1978. Due to the low number of eligible studies, four exceptions were made. Study of @blagodatskaya2014 was selected regardless the criterion (iii) to increase the number of studies reporting change of DNA concentration over time following saturating concentration of organic substrate. Study of @ziegler2005 was again selected regardless the criterion (iii) because it is the only study reporting change of PLFA concentration over time with sufficient temporal resolution. Studies of @sparling1988 and @Sparling1990a were selected regardless the criterion (ii) because they report large number of $k_{ec}$ estimates for soils with reasonably well defined initial conditions.
 
-Data were extracted from publications either directly or using the WebPlotDigitizer. When some data points were overlapping in graphs, they were not extracted. All extracted data were recalculated to $\mu mol$ of carbon per gram of oven dried soil applying conversion factors reported in @Vrede2004. When total microbial biomass was reported, the respective biomass proxy that was directly measured was calculated using a conversion factor reported in the study (i.e. typically 0.45 for $k_{ec}$ factor). The data are available at <https://github.com/petacapek/SoilMBVariability>.
+Data were extracted from publications either directly or using the WebPlotDigitizer. When some data points were overlapping in graphs, they were not extracted. When suitable, all extracted data were recalculated to $\mu mol$ of carbon per gram of oven dried soil (i.e. except of e.g. mass of microbial community) applying conversion factors reported in @Vrede2004. When total microbial biomass was reported, the respective biomass proxy that was directly measured was calculated using a conversion factor reported in the study (i.e. typically 0.45 for $k_{ec}$ factor). The data are available at <https://github.com/petacapek/SoilMBVariability>.
 
 ### 2.3. Model calibration and statistical analyses
 
@@ -130,7 +168,7 @@ In eq. 19, $Model_{SS_{res}^{normalized}}^{1}$ denote ${SS_{res}^{normalized}}$ 
 
 The comparison was not performed in studies reporting directly measured $k_{ec}$ factor, against which the model with two biomass pools was calibrated, because Monod and Pirt models cannot predict the $k_{ec}$ variability so the comparison is meaningless.
 
-To further asses generalizability of the theoretical background, model calibration was performed across all studies and the goodness of model fit was analyzed. To minimize number of model parameters, study of @ziegler2005 was excluded from the analysis. Thus, only the conversion factors between total soil microbial biomass, CFC, DNA, and ATP were estimated. Due to the low temporal resolution, studies of @sparling1988 and @Sparling1990a (see above) were also excluded. Because the studies supplying isotopically labelled and unlabelled organic substrate were analyzed together, certain offset in model predictions must appear independently of theoretical background validity (see the discussion section).
+To further asses generalizability of the theoretical background, sub-microbial model calibration was performed across all studies and the goodness of model fit was analyzed. To minimize number of model parameters, study of @ziegler2005 was excluded from the analysis and only ATP content from study of @nannipieri1978 was used. Thus, the conversion factors between total soil microbial biomass, CFC, DNA, and ATP were estimated in global analysis. Due to the low temporal resolution, studies of @sparling1988 and @Sparling1990a (see above) were also excluded. Because the studies supplying isotopically labelled and unlabelled organic substrate were analyzed together, certain offset in model predictions must appear independently of theoretical background validity (see the discussion section).
 
 To perform calibration of model parameters, initial conditions must be defined. This is not always possible when total soil biomass is composed of two pools whose content is apriori unknown. In studies that report temporal dynamic of two microbial proxies, the initial pools $B$ and $G$ were calculated as a product of conversion factors between total soil microbial biomass and reported proxies, and the initial concentration of the proxies. In other studies, $G$ was assumed to be initially equal to $\frac{m \times G_{m}}{I_m \times y_A}$ so the $G$ is large enough to only cover maintenance costs. When the model was calibrated against data from all studies combined, we simply assumed that initial $G$ is close to zero.
 
@@ -149,13 +187,14 @@ The correspondence between model predictions and observations in each individual
 **Table 1:** List of symbols used in mathematical model formulation. Explanation and units are reported to each symbol. Parameters marked by symbol '\*' are subjected to calibration (see section 2.3. Model calibration and statistical analyses for details).
 
 |     **Symbol**     |                           **Explanation**                            |                    **Unit**                     |
-|:----------------:|:-----------------------------:|:---------------------:|
+|:------------------:|:--------------------------------------------------------------------:|:-----------------------------------------------:|
 |     **Pools**      |                                                                      |                                                 |
 |         S          |                          Organic substrate                           |             $\mu mol(C)~g(DW)^{-1}$             |
 |         B          |                            Basal biomass                             |             $\mu mol(C)~g(DW)^{-1}$             |
 |         G          |                         Growth intermediates                         |     $\mu mol(C)~\mu mol(C~of~pool~B)^{-1}$      |
 |       $CO_2$       |                            Carbon dioxide                            |             $\mu mol(C)~g(DW)^{-1}$             |
 |         MB         |            Total microbial biomass ($MB=(B+B \times G)$)             |             $\mu mol(C)~g(DW)^{-1}$             |
+|         W          |                  Total mass of microbial community                   |               $\mu g~g(DW)^{-1}$                |
 |     **Fluxes**     |                                                                      |                                                 |
 |         U          |                Organic substrate uptake rate (eq. 1)                 |        $\mu mol(C)~g(DW)^{-1}~day^{-1}$         |
 |         A          |        Rate of organic substrate assimilation into G (eq. 1)         |        $\mu mol(C)~g(DW)^{-1}~day^{-1}$         |
@@ -178,49 +217,49 @@ The correspondence between model predictions and observations in each individual
 |      $t_G$\*       |                   Relative amount of ATP in pool G                   |                    unitless                     |
 |      $t_B$\*       |                   Relative amount of ATP in pool B                   |                    unitless                     |
 |      $p_B$\*       |                  Relative amount of PLFA in pool B                   |                    unitless                     |
+|      $W_G$\*       |            C-1 mole to mass conversion factor for pool G             |        $\mu g~\mu mol(C~of~pool~G)^{-1}$        |
+|      $W_B$\*       |            C-1 mole to mass conversion factor for pool B             |        $\mu g~\mu mol(C~of~pool~B)^{-1}$        |
 
 **Table 2:** Fit
 
-| Study                          | Substrate | Variable                 |              |                                |          |                   |
-|---------|---------|---------|----------|---------|---------|---------|
-| Labelled substrate             |           |                          |              |                                |          |                   |
-|                                |           | ${}^{14}S$ or ${}^{13}S$ | ${}^{14}CLC$ | ${}^{14}CO_2$ or ${}^{13}CO_2$ | $k_{ec}$ | ${}^{13}C_{PLFA}$ |
-| Glanville et al. (2016)        | Glucose   |                          | 0.85         | 0.99                           | 0.77     |                   |
-|                                | Alanine   |                          | 0.67         | 0.98                           | 0.69     |                   |
-| Sparling et al. (1988, 1990)   |           | 0.98                     | 0.84         | 0.78                           | 0.14     |                   |
-| Šantrůčková et al. (2004)      | Glucose   | 0.98                     | 0.99         | 0.99                           | 0.99     |                   |
-| Bremer and van Kessel (1990)   | Glucose   | 0.99                     | 0.98         | 0.99                           | 0.76     |                   |
-| $\dagger$Ziegler et al. (2005) | Glucose   | 0.82                     |              | 0.94                           | 0.72     |                   |
-| Unlabelled substrate           |           |                          |              |                                |          |                   |
-|                                |           | S                        | CLC          | $CO_2$                         | DNA      | ATP               |
-| Marstorp and Witter (1999)     | Glucose   | 0.85                     | 0.45         | 0.93                           | 0.86     |                   |
-| Tsai et al. (1997)             | Glucose   |                          | 0.73         | 0.95                           |          | 0.90              |
-| Joergensen and Raubuch (2002)  | Glucose   | 0.96                     | 0.91         |                                |          | 0.96              |
-|                                |           |                          |              |                                |          |                   |
+| Study                          | Substrate | Variable                 |              |                                |          |                   |      |
+|--------------------------------|-----------|--------------------------|--------------|--------------------------------|----------|-------------------|------|
+| Labelled substrate             |           |                          |              |                                |          |                   |      |
+|                                |           | ${}^{14}S$ or ${}^{13}S$ | ${}^{14}CLC$ | ${}^{14}CO_2$ or ${}^{13}CO_2$ | $k_{ec}$ | ${}^{13}C_{PLFA}$ |      |
+| Glanville et al. (2016)        | Glucose   |                          | 0.85         | 0.99                           | 0.77     |                   |      |
+|                                | Alanine   |                          | 0.67         | 0.98                           | 0.69     |                   |      |
+| Sparling et al. (1988, 1990)   |           | 0.98                     | 0.84         | 0.78                           | 0.14     |                   |      |
+| Šantrůčková et al. (2004)      | Glucose   | 0.98                     | 0.99         | 0.99                           | 0.99     |                   |      |
+| Bremer and van Kessel (1990)   | Glucose   | 0.99                     | 0.98         | 0.99                           | 0.76     |                   |      |
+| $\dagger$Ziegler et al. (2005) | Glucose   | 0.82                     |              | 0.94                           | 0.72     |                   |      |
+| Unlabelled substrate           |           |                          |              |                                |          |                   |      |
+|                                |           | S                        | CLC          | $CO_2$                         | DNA      | ATP               | W    |
+| Marstorp and Witter (1999)     | Glucose   | 0.85                     | 0.45         | 0.93                           | 0.86     |                   |      |
+| Tsai et al. (1997)             | Glucose   |                          | 0.73         | 0.95                           |          | 0.90              |      |
+| Joergensen and Raubuch (2002)  | Glucose   | 0.96                     | 0.91         |                                |          | 0.96              |      |
+| Nannipieri et al. (1977)       | Glucose   |                          |              | 0.86                           |          | 0.71              | 0.70 |
+| Blagodatskaya et al. (2014)    | Glucose   |                          |              | 0.91                           | 0.86     |                   |      |
 
 **Table 3:** Parameters
 
-| Study                         | Substrate | $I_m$           | $K_m$           | $y_A$           | $G_m$                                         | m                                             | g                              | $n_G$           | $n_{B}$         | $i_B$             | $t_G$                                         | $t_B$                                         | $p_B$                                         |
-|-----|-----|-----|-----|-----|-----|-----|-----|-----|-----|-----|-----|-----|------------|
-| Glanville et al. (2016)       | Glucose   | $13.5 \pm 3.37$ | $0.12 \pm 0.22$ | $0.94 \pm 0.05$ | $6.39 \pm 1.23$                               | $8.15 \times 10^{-4} \pm 3.07 \times 10^{-4}$ | $0.15 \pm 0.09$                | $0.43 \pm 0.03$ | $0.28 \pm 0.02$ |                   |                                               |                                               |                                               |
-|                               | Alanine   | $9.86 \pm 3.33$ | $0.11 \pm 0.10$ | $0.89 \pm 0.06$ | $4.57 \pm 1.61$                               | $1.24 \times 10^{-3} \pm 1.55 \times 10^{-3}$ | $0.29 \pm 0.12$                | $0.36 \pm 0.02$ | $0.27 \pm 0.02$ |                   |                                               |                                               |                                               |
-| Sparling et al. (1988, 1990)  | Glucose   | $0.11 \pm 0.04$ | $0.15 \pm 0.13$ | $0.67 \pm 0.05$ | $0.76 \pm 0.79$                               | $6.21 \times 10^{-7} \pm 5.08 \times 10^{-7}$ | $0.02 \pm 4.58 \times 10^{-3}$ | $0.42 \pm 0.10$ | $0.15 \pm 0.06$ |                   |                                               |                                               |                                               |
-| Šantrůčková et al. (2004)     | Glucose   | $11.3 \pm 4.40$ | $212 \pm 64.6$  | $0.98 \pm 0.08$ | $2.52 \pm 1.12$                               | $1.97 \times 10^{-6} \pm 1.86 \times 10^{-6}$ | $0.33 \pm 0.12$                | $0.48 \pm 0.18$ | $0.22 \pm 0.04$ |                   |                                               |                                               |                                               |
-| Bremer and van Kessel (1990)  | Glucose   | $4.00 \pm 2.01$ | $25.0 \pm 18.8$ | $0.98 \pm 0.08$ | $0.93 \pm 0.95$                               | $4.88 \times 10^{-3} \pm 5.27 \times 10^{-3}$ | $0.51 \pm 0.18$                | $0.48 \pm 0.04$ | $0.34 \pm 0.05$ |                   |                                               |                                               |                                               |
-| Ziegler et al. (2005)         | Glucose   | $8.67 \pm 3.74$ | $323 \pm 82.6$  | $0.99 \pm 0.03$ | $1.60 \times 10^{-3} \pm 1.92 \times 10^{-3}$ | $0.01 \pm 0.004$                              | $0.01 \pm 0.01$                |                 |                 |                   |                                               |                                               | $7.98 \times 10^{-3} \pm 2.20 \times 10^{-3}$ |
-| Marstorp and Witter (1999)    | Glucose   | $6.28 \pm 2.57$ | $222 \pm 59.6$  | $1 \pm 0.09$    | $1.08 \pm 1.1$                                | $7.45 \times 10^{-3} \pm 4.62 \times 10^{-3}$ | $1.15 \pm 0.45$                | $1.00 \pm 0.16$ | $0.15 \pm 0.07$ | $0.028 \pm 0.009$ |                                               |                                               |                                               |
-| Tsai et al. (1997)            | Glucose   | $0.87 \pm 3.54$ | $323 \pm 63.5$  | $0.43 \pm 0.16$ | $0.84 \pm 1.08$                               | $3.51 \times 10^{-4} \pm 6.60 \times 10^{-3}$ | $0.19 \pm 0.38$                | $0.40 \pm 0.17$ | $0.03 \pm 0.04$ |                   | $1.18 \times 10^{-3} \pm 9.93 \times 10^{-5}$ | $2.71 \times 10^{-5} \pm 9.51 \times 10^{-5}$ |                                               |
-| Joergensen and Raubuch (2002) | Glucose   | $20.0 \pm 4.70$ | $252 \pm 90.3$  | $0.68 \pm 0.13$ | $3.37 \pm 1.91$                               | $1.84 \times 10^{-2} \pm 5.57 \times 10^{-3}$ | $5.00 \pm 0.87$                | $0.69 \pm 0.17$ | $0.46 \pm 0.10$ |                   | $1.52 \times 10^{-8}\pm 1.59 \times 10^{-4}$  | $8.61 \times 10^{-4} \pm 1.41 \times 10^{-4}$ |                                               |
-|                               |           |                 |                 |                 |                                               |                                               |                                |                 |                 |                   |                                               |                                               |                                               |
-|                               |           |                 |                 |                 |                                               |                                               |                                |                 |                 |                   |                                               |                                               |                                               |
-|                               |           |                 |                 |                 |                                               |                                               |                                |                 |                 |                   |                                               |                                               |                                               |
-|                               |           |                 |                 |                 |                                               |                                               |                                |                 |                 |                   |                                               |                                               |                                               |
-|                               |           |                 |                 |                 |                                               |                                               |                                |                 |                 |                   |                                               |                                               |                                               |
+| Study                         | Substrate | $I_m$           | $K_m$           | $y_A$                                         | $G_m$                                         | m                                             | g                              | $n_G$           | $n_{B}$         | $i_B$              | $t_G$                                         | $t_B$                                         | $p_B$                                         | $W_G$           | $W_B$           |
+|-------------------------------|-----------|-----------------|-----------------|-----------------------------------------------|-----------------------------------------------|-----------------------------------------------|--------------------------------|-----------------|-----------------|--------------------|-----------------------------------------------|-----------------------------------------------|-----------------------------------------------|-----------------|-----------------|
+| Glanville et al. (2016)       | Glucose   | $13.5 \pm 3.37$ | $0.12 \pm 0.22$ | $0.94 \pm 0.05$                               | $6.39 \pm 1.23$                               | $8.15 \times 10^{-4} \pm 3.07 \times 10^{-4}$ | $0.15 \pm 0.09$                | $0.43 \pm 0.03$ | $0.28 \pm 0.02$ |                    |                                               |                                               |                                               |                 |                 |
+|                               | Alanine   | $9.86 \pm 3.33$ | $0.11 \pm 0.10$ | $0.89 \pm 0.06$                               | $4.57 \pm 1.61$                               | $1.24 \times 10^{-3} \pm 1.55 \times 10^{-3}$ | $0.29 \pm 0.12$                | $0.36 \pm 0.02$ | $0.27 \pm 0.02$ |                    |                                               |                                               |                                               |                 |                 |
+| Sparling et al. (1988, 1990)  | Glucose   | $0.11 \pm 0.04$ | $0.15 \pm 0.13$ | $0.67 \pm 0.05$                               | $0.76 \pm 0.79$                               | $6.21 \times 10^{-7} \pm 5.08 \times 10^{-7}$ | $0.02 \pm 4.58 \times 10^{-3}$ | $0.42 \pm 0.10$ | $0.15 \pm 0.06$ |                    |                                               |                                               |                                               |                 |                 |
+| Šantrůčková et al. (2004)     | Glucose   | $11.3 \pm 4.40$ | $212 \pm 64.6$  | $0.98 \pm 0.08$                               | $2.52 \pm 1.12$                               | $1.97 \times 10^{-6} \pm 1.86 \times 10^{-6}$ | $0.33 \pm 0.12$                | $0.48 \pm 0.18$ | $0.22 \pm 0.04$ |                    |                                               |                                               |                                               |                 |                 |
+| Bremer and van Kessel (1990)  | Glucose   | $4.00 \pm 2.01$ | $25.0 \pm 18.8$ | $0.98 \pm 0.08$                               | $0.93 \pm 0.95$                               | $4.88 \times 10^{-3} \pm 5.27 \times 10^{-3}$ | $0.51 \pm 0.18$                | $0.48 \pm 0.04$ | $0.34 \pm 0.05$ |                    |                                               |                                               |                                               |                 |                 |
+| Ziegler et al. (2005)         | Glucose   | $8.67 \pm 3.74$ | $323 \pm 82.6$  | $0.99 \pm 0.03$                               | $1.60 \times 10^{-3} \pm 1.92 \times 10^{-3}$ | $0.01 \pm 0.004$                              | $0.01 \pm 0.01$                |                 |                 |                    |                                               |                                               | $7.98 \times 10^{-3} \pm 2.20 \times 10^{-3}$ |                 |                 |
+| Marstorp and Witter (1999)    | Glucose   | $6.28 \pm 2.57$ | $222 \pm 59.6$  | $1 \pm 0.09$                                  | $1.08 \pm 1.1$                                | $7.45 \times 10^{-3} \pm 4.62 \times 10^{-3}$ | $1.15 \pm 0.45$                | $1.00 \pm 0.16$ | $0.15 \pm 0.07$ | $0.028 \pm 0.009$  |                                               |                                               |                                               |                 |                 |
+| Tsai et al. (1997)            | Glucose   | $0.87 \pm 3.54$ | $323 \pm 63.5$  | $0.43 \pm 0.16$                               | $0.84 \pm 1.08$                               | $3.51 \times 10^{-4} \pm 6.60 \times 10^{-3}$ | $0.19 \pm 0.38$                | $0.40 \pm 0.17$ | $0.03 \pm 0.04$ |                    | $1.18 \times 10^{-3} \pm 9.93 \times 10^{-5}$ | $2.71 \times 10^{-5} \pm 9.51 \times 10^{-5}$ |                                               |                 |                 |
+| Joergensen and Raubuch (2002) | Glucose   | $20.0 \pm 4.70$ | $252 \pm 90.3$  | $0.68 \pm 0.13$                               | $3.37 \pm 1.91$                               | $1.84 \times 10^{-2} \pm 5.57 \times 10^{-3}$ | $5.00 \pm 0.87$                | $0.69 \pm 0.17$ | $0.46 \pm 0.10$ |                    | $1.52 \times 10^{-8}\pm 1.59 \times 10^{-4}$  | $8.61 \times 10^{-4} \pm 1.41 \times 10^{-4}$ |                                               |                 |                 |
+| Nannipieri et al. (1977)      | Glucose   | $0.66 \pm 0.67$ | $132 \pm 57.8$  | $1.12 \times 10^{-2} \pm 7.18 \times 10^{-3}$ | $1.12 \times 10^{-3} \pm 3.21 \times 10^{-3}$ | $8.23 \times 10^{-3} \pm 4.77 \times 10^{-3}$ | $0.73 \pm 0.95$                |                 |                 |                    | $1.58 \times 10^{-5} \pm 1.09 \times 10^{-5}$ | $2.28 \times 10^{-4} \pm 2.68 \times 10^{-4}$ |                                               | $8.09 \pm 4.77$ | $19.6 \pm 21.8$ |
+| Blagodatskaya et al. (2014)   |           | $2.58 \pm 2.73$ | $0.10 \pm 0.13$ | $1.00 \pm 0.12$                               | $1.21 \pm 1.41$                               | $7.65 \times 10^{-5} \pm 12.8 \times 10^{-5}$ | $0.97 \pm 1.41$                |                 |                 | $0.027 \pm 0.0065$ |                                               |                                               |                                               |                 |                 |
 
 **Table 4:** Models fit comparison
 
 | Study                         | Model         | $SS_{res}^{normalized}$ | $N_{par}$ | $N_{obs}$ | F     | p       |
-|-----------|----------|----------|----------|----------|----------|----------|
+|-------------------------------|---------------|-------------------------|-----------|-----------|-------|---------|
 | Ziegler et al. (2005)         | Sub-microbial | 6.51                    | 7         | 16        |       |         |
 |                               | Pirt          | 2.82                    | 6         | 16        | -5.10 | 1       |
 |                               | Monod         | 3.77                    | 6         | 16        | -1.89 | 1       |
@@ -230,14 +269,80 @@ The correspondence between model predictions and observations in each individual
 | Tsai et al. (1997)            | Sub-microbial | 9.78                    | 10        | 72        |       |         |
 |                               | Pirt          | 31.8                    | 7         | 72        | 46.5  | \<0.001 |
 |                               | Monod         | 33.2                    | 6         | 72        | 37.2  | \<0.001 |
-| Joergensen and Raubuch (2002) | Sub-microbial | 0.93                    |           | 21        |       |         |
-|                               | Pirt          | 7.08                    |           | 21        | 23.9  | \<0.001 |
-|                               | Monod         | 7.00                    |           | 21        | 18.2  | \<0.001 |
+| Joergensen and Raubuch (2002) | Sub-microbial | 0.93                    | 10        | 21        |       |         |
+|                               | Pirt          | 7.08                    | 7         | 21        | 23.9  | \<0.001 |
+|                               | Monod         | 7.00                    | 6         | 21        | 18.2  | \<0.001 |
+| Nannipieri et al. (1977)      | Sub-microbial | 16.2                    | 10        | 68        |       |         |
+|                               | Pirt          | 39.1                    | 7         | 68        | 27.2  | \<0.001 |
+|                               | Monod         | 20.7                    | 6         | 68        | 4.01  | 0.006   |
+| Blagodatskaya et al. (2014)   | Sub-microbial | 5.16                    | 7         | 90        |       |         |
+|                               | Pirt          | 7.77                    | 6         | 90        | 42.0  | \<0.001 |
+|                               | Monod         | 7.76                    | 5         | 90        | 20.9  | \<0.001 |
 
 ## Figures
 
 ```{r Figure1, out.height = "700px", out.width='800px', echo=F, message=FALSE, fig.cap="**Figure 1:** **A)** Relationship between the specific growth rate of Aerobacter aerogenes population, its cell mass (dark grey circles) and three different cell components - proteins (empty cirles), RNA (light grey circles), and DNA (black circles). Data were redrawn from Herbert (1961). Lines represent fit of the model described in section 2.1.1. Mathematical model. Model parameters that were used to draw the predictions are reported in Tab. S1. **B)** Relationship between the amount of growth intermediates scaled to the maximum that microbial cell can have $$(\\frac{G}{G_m})$$ and the $$k_{ec}$$ factor (i.e. chloroform labile part of microbial biomass) depending on the value of parameters $$n_G$$ and $$n_B$$ representing respectively the relative amount of basal microbial biomass and growth intermediates extrated from soil after chloroform fumigation (see Tab. 1 and section 2.1.1. Mathematical model for detail explanation). **C)** Schematic representation of sub-microbial model described in section 2.1.1. Mathematical model. Different boxes represent different carbon pools. Arrows represent different carbon fluxes. "}
 knitr::include_graphics("../Manuscript/Theoretical.pdf")
+```
+
+```{r Figure2, echo=FALSE, fig.height=10, fig.width=10, message=FALSE, warning=FALSE, fig.cap="**Figure 2**: A - B: Correspondence between the predictions of sub-microbial model (black solid lines) and observations reported in Šantrůčková et al. (2004) - $k_{ec}$ factor (grey circles in plot A), ${}^{14}CLC$ (empty circles in plot B), ${}^{14}CO_2$ (black circles in plot B), and ${}^{14}S$ (grey circles in plot B). C: Development of DNA to CLC ratio over time following glucose addition as observed in study of Marstorp and Witter (1999). Solid black line represent predictions of sub-microbial model, solid ligh grey and dashed dark grey lines represent predictions of Pirt and Monod model, respectively. C: Development of ATP to CLC ratio over time following glucose addition as observed in study of Joergensen and Raubuch (2002). Solid black line represent predictions of sub-microbial model, solid ligh grey and dashed dark grey lines represent predictions of Pirt and Monod model, respectively. "}
+
+JData = read.csv("../SoilMBVariabilityData/Joergensen2002.csv")
+Jsim = read.csv("../Manuscript/figure_data/SimJoerg.csv")
+JsimP = read.csv("../Manuscript/figure_data/SimJoergP.csv")
+JsimM = read.csv("../Manuscript/figure_data/SimJoergM.csv")
+MData = read.csv("../SoilMBVariabilityData/Marstorp1999.csv")
+Msim = read.csv("../Manuscript/figure_data/SimMarstorp.csv")
+MsimP = read.csv("../Manuscript/figure_data/SimMarstorpP.csv")
+MsimM = read.csv("../Manuscript/figure_data/SimMarstorpM.csv")
+HPData = read.csv("../SoilMBVariabilityData/Santruckova2004.csv")
+HPSim <- read.csv("../Manuscript/figure_data/SimHasan.csv") 
+
+grid.arrange(
+  ggplot(HPData, aes(Time, kec)) + geom_point(cex=6, pch=21, fill = "grey") +
+    theme_min + ylab(expression(paste(italic(k[ec])))) + xlab("Time (days)") + 
+    geom_line(data = HPSim, aes(Time, kec), lwd = 1.2) +
+    scale_y_continuous(limits = c(0.2, 0.5)) +
+    ggtitle("A)"),
+  ggplot(HPData, aes(x = Time)) + geom_point(cex=6, pch=21, aes(y = S, fill = "Substrate")) +
+    geom_point(cex=6, pch=21, aes(y = Flush*4, fill = "CLC")) +
+    geom_point(cex=6, pch=21, aes(y = CO2*4, fill = "CO2")) +
+    geom_line(data = HPSim, aes(Time, S), lwd = 0.8, show.legend = F) +
+    geom_line(data = HPSim, aes(Time, Flush*4), lwd = 0.8, show.legend = F) +
+    geom_line(data = HPSim, aes(Time, CO2*4), lwd = 0.8, show.legend = F) +
+    scale_y_continuous(sec.axis = sec_axis(~./4,
+                                           name = expression(paste({}^{14}," CLC and ",{}^{14}~CO[2] ," (", mu, "mol(C) " , g^{-1}, "(DW))")))) + 
+    theme_min + theme(legend.position = c(0.8, 0.3), legend.title = element_blank()) +
+    labs(y = expression(paste({}^{14},"S (", mu, "mol(C) " , g^{-1}, "(DW))")),
+         x = expression(paste("Time (days)")),
+         fill = "Variable", color = "Variable") +
+    scale_fill_manual(values = c("white", "black", "grey"), 
+                      labels = c(expression(paste({}^{14}~CLC)),
+                                 expression(paste({}^{14}~CO[2])),
+                                 expression(paste({}^{14}~S))))+
+    scale_color_manual(values = c("black", "grey80", "grey"), 
+                       labels = c(expression(paste({}^{14}~CLC)),
+                                  expression(paste({}^{14}~CO[2])),
+                                  expression(paste({}^{14}~S)))) +
+    ggtitle("B)"),
+ ggplot(MData, aes(Time, DNA/Flush)) + geom_point(cex=6, pch=21, fill = "grey") +
+    theme_min + ylab(expression(paste(frac(DNA, CLC)~~~frac(mol,mol)))) + xlab("Time (days)") +
+    geom_line(data = Msim, aes(Time, DNA/Flush, color = "Sub-microbial"), lwd = 1.5, show.legend = F) +
+    geom_line(data = MsimP, aes(Time, DNA/Flush, color = "Pirt"), lwd = 1.5, show.legend = F) +
+    geom_line(data = MsimM, aes(Time, DNA/Flush, color = "Monod"), lwd = 1.5, lty = 2, show.legend = F) +
+    ggtitle("C)") +
+    scale_color_manual(values = c("grey30", "grey", "black")) +
+    labs(color = "Model"),
+  ggplot(JData, aes(Time, ATP*1000/Cmic)) + geom_point(cex=6, pch=21, fill = "grey") +
+    theme_min + ylab(expression(paste(frac(ATP, CLC)~~~frac(mmol,mol)))) + xlab("Time (days)") +
+    geom_line(data = Jsim, aes(Time, ATP*1000/Flush, color = "Sub-microbial"), lwd = 1.5) +
+    geom_line(data = JsimP, aes(Time, ATP*1000/Flush, color = "Pirt"), lwd = 1.5) +
+    geom_line(data = JsimM, aes(Time, ATP*1000/Flush, color = "Monod"), lwd = 1.5, lty = 2)  +  
+    ggtitle("D)") + theme(legend.position = c(0.7, 0.2), legend.title = element_blank()) + ylim(0.6, 2.2) +
+    scale_color_manual(values = c("grey30", "grey", "black")) +
+    labs(color = "Model")
+)
+
 ```
 
 ## References:

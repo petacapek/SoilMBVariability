@@ -6,12 +6,12 @@ BO<-function(x){
   ##E and X1 at time zero are estimated from the Flush/DNA corrected for respective conversion factors
   X10R = as.numeric(BData[BData$Treatment=="Rhizosphere", c("DNAinit")])[1]/x[9]
   X10 = as.numeric(BData[BData$Treatment!="Rhizosphere", c("DNAinit")])[1]/x[9]
-  E0 = 1e-12
+  E0 = max(x[5]*x[4]/x[1]/x[3], 1e-12)
   y0R <- c(as.numeric(BData[BData$Treatment=="Rhizosphere", c("Sinit")])[1], E0, X10R, 0)
   y0 <- c(as.numeric(BData[BData$Treatment!="Rhizosphere", c("Sinit")])[1], E0, X10, 0)
   #==========================Running simulation
-  Yhat <- rbind(Blag2014ODESolv(DEBmodel, x[c(1:6, 9)], timesR, y0R),
-                Blag2014ODESolv(DEBmodel, x[c(1:6, 9)], times, y0))
+  Yhat <- rbind(Blag2014ODESolv(DEBmodel, c(x[1:6], x[9]), timesR, y0R),
+                Blag2014ODESolv(DEBmodel, c(x[1:6], x[9]), times, y0))
   #==========================Calculating error that is minimized
   ##Measured data
   Y <- data.matrix(BData[, c("CO2", "DNA")])

@@ -658,7 +658,7 @@ parsAll <- rbind(parsAll, data.frame(Study = c("Ziegler et al. (2005)"),
                                      ne = NA, nX1 = NA, 
                                      iX1 = NA, te = NA, tX1 = NA, re = NA, rX1 = NA, 
                                      pe = NA, pX1 = NA, 
-                                     le = ParmsZiegler2014$par[7], lX1 = ParmsZiegler2014$par[8]))
+                                     le = NA, lX1 = ParmsZiegler2014$par[7]))
 #=====================
 
 #=================================
@@ -917,9 +917,9 @@ ggplot(TData, aes(Time, ATP*1000)) + geom_point(cex=6, pch=21, fill = "grey") +
   facet_grid(.~Treatment)
 
 ##ATP to Cmic
-ggplot(TData, aes(Time, ATP*1000/Cmic)) + geom_point(cex=6, pch=21, fill = "grey") +
+ggplot(TData[TData$Treatment=="HG", ], aes(Time, ATP*1000/Cmic)) + geom_point(cex=6, pch=21, fill = "grey") +
   theme_min + ylab(expression(paste(frac(ATP, CHCl[3]~flush),"    (", frac(mmol, mol),")"))) + xlab("Time (days)") +
-  geom_line(data = (SimTsai1997$Simulation), aes(Time, ATP*1000/Flush), lwd = 1.5) +
+  geom_line(data = (SimTsai1997$Simulation[SimTsai1997$Simulation$Treatment=="HG", ]), aes(Time, ATP*1000/Flush), lwd = 1.5) +
   #geom_line(data = (SimTsai1997M$Simulation), aes(Time, ATP*1000/Flush), lwd = 1.5, color = "grey") +
   #geom_line(data = (SimTsai1997P$Simulation), aes(Time, ATP*1000/Flush), lwd = 1.5, color = "grey30", lty = 2) +
   facet_grid(.~Treatment)
@@ -1407,13 +1407,12 @@ yA0 = c(mean(parsAll$yA[-10]), min(parsAll$yA), max(parsAll$yA)) #3
 Em0 = c(mean(parsAll$Em), min(parsAll$Em), max(parsAll$Em)) #4
 m0 = c(mean(parsAll$m), min(parsAll$m), max(parsAll$m))     #5
 g0 = c(mean(parsAll$g), min(parsAll$g), max(parsAll$g))     #6
-ne0 = c(mean(parsAll$ne, na.rm = T), min(parsAll$ne, na.rm = T), max(parsAll$ne, na.rm = T)) #7
+ne0 = c(mean(parsAll$ne[-6], na.rm = T), min(parsAll$ne, na.rm = T), max(parsAll$ne, na.rm = T)) #7
 nX10 = c(mean(parsAll$nX1, na.rm = T), min(parsAll$nX1, na.rm = T), max(parsAll$nX1, na.rm = T)) #8
 iX10 = c(mean(parsAll$iX1, na.rm = T), 1e-4, 0.1)           #9
 te0 = c(mean(parsAll$te, na.rm = T), min(parsAll$te, na.rm = T), max(parsAll$te, na.rm = T)) #10
 tX10 = c(mean(parsAll$tX1, na.rm = T), min(parsAll$tX1, na.rm = T), max(parsAll$tX1, na.rm = T)) #11
-#le0 = c(mean(parsAll$le, na.rm = T), 0, 0.1)                
-#lX10 = c(mean(parsAll$lX1, na.rm = T), 0, 0.1)             
+lX10 = c(parsAll$lX1[11], 0, 1)          #12  
 #GlE0 = c(0.5, 0, 1)                                         
 #HPE0 = c(0.5, 0, 1)                                         #12
 #BKE0 = c(0.5, 0, 1)                                         #13
@@ -1423,10 +1422,8 @@ tX10 = c(mean(parsAll$tX1, na.rm = T), min(parsAll$tX1, na.rm = T), max(parsAll$
 #MX10 = c(100, 1, 1000)                                      
 #BlE0 = c(0.5, 0, 1)                                         
 
-#============================================= Assuming E0 = 0 ===============================================#
-                
-Parms = rbind(Im0, Km0, yA0, Em0, m0, g0, ne0, nX10, 
-               iX10, te0, tX10)
+#==================================================#
+Parms = rbind(Im0, Km0, yA0, Em0, m0, g0, ne0, nX10, iX10, te0, tX10)
 #==================================================#
 ##Uploading respective functions
 source_python("../PythonScripts/IndividualStudies/DEBmodelIso.py")
@@ -1448,11 +1445,13 @@ source_python("../PythonScripts/IndividualStudies/Nanni1977ODESolvATP.py")
 source("GlobalFit/NO.R")
 source_python("../PythonScripts/IndividualStudies/Blag2014ODESolv.py") 
 source("GlobalFit/BO.R")
+source_python("../PythonScripts/IndividualStudies/Ziegler2005ODESolv.py") 
+source("GlobalFit/ZO.R")
 #==================================================#
 ##Objective function
 GlobalFit <- function(x){
   return(sum(
-    BO(x), GlO(x), HPO(x), MO(x), TO(x), JO(x), NO(x) #  ZO(x), SpO2(x), BKO(x),
+    BO(x), GlO(x), HPO(x), MO(x), TO(x), JO(x), NO(x),  BKO(x) #ZO(x), SpO(x), 
   ))
 }
 #==================================================#
@@ -1460,7 +1459,7 @@ GlobalFit <- function(x){
 ###First guess by MCMC 
 GF <- modMCMC(GlobalFit, p = Parms[, 1], 
               lower = Parms[, 2],
-              upper = Parms[, 3], updatecov = 100, burninlength = 1000, niter = 100000)
+              upper = Parms[, 3], updatecov = 100, burninlength = 1000, niter = 50000)
 ##Estimate
 ###Artificial bee-colony algorithm
 GlobalParmsABC <- abc_optim(fn = GlobalFit, par = as.numeric(summary(GF)["mean", ]), 
@@ -1470,19 +1469,20 @@ GlobalParmsABC$par
 #==================================================#
 ##Visualization
 ###Uploading respective functions
-source("GlobalFit/BKFit.R")
-source("GlobalFit/HPFit.R")
-source("GlobalFit/GlFit.R")
+source("GlobalFit/BKFitG.R")
+source("GlobalFit/HPFitG.R")
+source("GlobalFit/GlFitG.R")
 source("GlobalFit/NFitG.R")
 source("GlobalFit/JFitG.R")
 source("GlobalFit/TFitG.R")
 source("GlobalFit/MFitG.R")
-source("GlobalFit/SpFit.R")
-source("GlobalFit/BFit.R")
+source("GlobalFit/SpFitG.R")
+source("GlobalFit/BFitG.R")
+source("GlobalFit/ZFitG.R")
 ##Fit function
 GlobalFitViz <- function(x){
   return(rbind(
-    BFit(x), GlFit(x),BKFit(x), HPFit(x), NFitG(x), TFitG(x), JFitG(x), MFitG(x) #SpFit2(x), ZFit(x),  
+    BFitG(x), GlFitG(x),BKFitG(x), HPFitG(x), NFitG(x), TFitG(x), JFitG(x), MFitG(x)#, SpFitG(x), ZFitG(x)  
   ))
 }
 VizOut <- GlobalFitViz(GlobalParmsABC$par)
@@ -1504,14 +1504,14 @@ VizAnot <- data.frame(Variable = as.character(GlobalGoddness$Variable), label = 
 ggplot(VizOut, aes(Observations, Predictions)) + geom_point(cex = 6, aes(color = Study)) + theme_min + 
   geom_text(data = VizAnot, mapping = aes(x = -Inf, y = -Inf, label = label),
             hjust = -1.6, vjust = -1, parse = T, cex = 6) +
-  facet_wrap(~Variable, scales = "free", labeller = as_labeller(VizLab, label_parsed)) + 
+  facet_wrap(~Variable, scales = "free") + #, labeller = as_labeller(VizLab, label_parsed)
   geom_abline(intercept = 0, slope = 1) +
   theme()
 
 #Parameters bounds
 GFf <- modMCMC(GlobalFit, p = GlobalParmsABC$par, 
                lower = Parms2[, 2],
-               upper = Parms2[, 3], updatecov = 100, burninlength = 1000, niter = 100000)
+               upper = Parms2[, 3], updatecov = 100, burninlength = 1000, niter = 50000)
 summary(GFf)
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
@@ -1707,32 +1707,163 @@ ggplot(kecT, aes(EEm, kec)) + geom_line(aes(color = Legend, linetype = Legend)) 
   geom_hline(yintercept = 0.45, color = "red") + theme(legend.title = element_blank()) +
   ggtitle("C)")
   
-#==================Composite figure to sho in main text
+#==================Composite figure to the in main text
 grid.arrange(
-  ##Substrate concentration
-  ggplot(HPData, aes(Time, S)) + geom_point(cex=6, pch=21, fill = "grey") +
-    theme_min + ylab(expression(paste({}^{14},"S (", mu, "mol(C) " , g^{-1}, "(DW))"))) + 
-    xlab("Time (days)") +
-    geom_line(data = HPSim, aes(Time, S), lwd = 1.2) +
-    ggtitle("A)"),
-  ##Cmic 14
-  ggplot(HPData, aes(Time, Flush)) + geom_point(cex=6, pch=21, fill = "grey") +
-    theme_min + ylab(expression(paste({}^{14}," CLC (", mu, "mol(C) " , g^{-1}, "(DW))"))) + 
-    xlab("Time (days)") +
-    geom_line(data = HPSim, aes(Time, Flush), lwd = 1.2) +
-    ggtitle("B)"),
-  ##Cumulative respiration
-  ggplot(HPData, aes(Time, CO2)) + geom_point(cex=6, pch=21, fill = "grey") +
-    theme_min + ylab(expression(paste({}^{14},"C", O[2]," (", mu, "mol(C) " , g^{-1}, "(DW))"))) + 
-    xlab("Time (days)") +
-    geom_line(data = HPSim, aes(Time, CO2), lwd = 1.2) +
-    ggtitle("C)"),
-  ##kec factor
   ggplot(HPData, aes(Time, kec)) + geom_point(cex=6, pch=21, fill = "grey") +
-    theme_min + ylab(expression(paste(italic(k[ec])))) + xlab("Time (days)") + #ylim(0.20, 0.35) +
+    theme_min + ylab(expression(paste(italic(k[ec])))) + xlab("Time (days)") + 
     geom_line(data = HPSim, aes(Time, kec), lwd = 1.2) +
     scale_y_continuous(limits = c(0.2, 0.5)) +
-    ggtitle("D)"),
-  nrow = 2
+    ggtitle("A)"),
+  ggplot(HPData, aes(x = Time)) + geom_point(cex=6, pch=21, aes(y = S, fill = "Substrate")) +
+    geom_point(cex=6, pch=21, aes(y = Flush*4, fill = "CLC")) +
+    geom_point(cex=6, pch=21, aes(y = CO2*4, fill = "CO2")) +
+    geom_line(data = HPSim, aes(Time, S), lwd = 1.2, show.legend = F) +
+    geom_line(data = HPSim, aes(Time, Flush*4), lwd = 1.2, show.legend = F, lty = 2) +
+    geom_line(data = HPSim, aes(Time, CO2*4), lwd = 1.2, show.legend = F, lty = 4) +
+    scale_y_continuous(sec.axis = sec_axis(~./4,
+                                           name = expression(paste({}^{14}," CLC and ",{}^{14}~CO[2] ," (", mu, "mol(C) " , g^{-1}, "(DW))")))) + 
+    theme_min + 
+    labs(y = expression(paste({}^{14},"S (", mu, "mol(C) " , g^{-1}, "(DW))")),
+         x = expression(paste("Time (days)")),
+         fill = "Variable", color = "Variable") +
+    scale_fill_manual(values = c("white", "black", "grey"), 
+                      labels = c(expression(paste({}^{14}~CLC)),
+                                 expression(paste({}^{14}~CO[2])),
+                                 expression(paste({}^{14}~S))))+
+    scale_color_manual(values = c("black", "grey80", "grey"), 
+                       labels = c(expression(paste({}^{14}~CLC)),
+                                  expression(paste({}^{14}~CO[2])),
+                                  expression(paste({}^{14}~S)))) +
+    ggtitle("B)"),
+ ggplot(MData, aes(Time, DNA/Flush)) + geom_point(cex=6, pch=21, fill = "grey") +
+    theme_min + ylab(expression(paste(frac(DNA, CLC)~~~frac(mol,mol)))) + xlab("Time (days)") +
+    geom_line(data = Msim, aes(Time, DNA/Flush, color = "Sub-microbial"), lwd = 1.5, show.legend = F) +
+    geom_line(data = MsimP, aes(Time, DNA/Flush, color = "Pirt"), lwd = 1.5, show.legend = F) +
+    geom_line(data = MsimM, aes(Time, DNA/Flush, color = "Monod"), lwd = 1.5, lty = 2, show.legend = F) +
+    ggtitle("C)") +
+    scale_color_manual(values = c("grey30", "grey", "black")) +
+    labs(color = "Model"),
+  ggplot(JData, aes(Time, ATP*1000/Cmic)) + geom_point(cex=6, pch=21, fill = "grey") +
+    theme_min + ylab(expression(paste(frac(ATP, CLC)~~~frac(mmol,mol)))) + xlab("Time (days)") +
+    geom_line(data = Jsim, aes(Time, ATP*1000/Flush, color = "Sub-microbial"), lwd = 1.5) +
+    geom_line(data = JsimP, aes(Time, ATP*1000/Flush, color = "Pirt"), lwd = 1.5) +
+    geom_line(data = JsimM, aes(Time, ATP*1000/Flush, color = "Monod"), lwd = 1.5, lty = 2)  +  
+    ggtitle("D)") +
+    scale_color_manual(values = c("grey30", "grey", "black")) +
+    labs(color = "Model")
 )
+
+###############################################################################################################
+#####################################################NOT RUN###################################################
+###############################################################################################################
+
+###############################################################################################################
+#============================With studies of Sparling 
+##Objective function
+GlobalFitSp <- function(x){
+  return(sum(
+    BO(x), GlO(x), HPO(x), MO(x), TO(x), JO(x), NO(x),  BKO(x), SpO(x) #ZO(x), 
+  ))
+}
+#==================================================#
+##Optimization
+###First guess by MCMC 
+GFSp <- modMCMC(GlobalFitSp, p = Parms[, 1], 
+              lower = Parms[, 2],
+              upper = Parms[, 3], updatecov = 100, burninlength = 1000, niter = 50000)
+##Estimate
+###Artificial bee-colony algorithm
+GlobalParmsSp <- abc_optim(fn = GlobalFitSp, par = as.numeric(summary(GFSp)["mean", ]), 
+                            lb = as.numeric(summary(GFSp)["min", ]), 
+                            ub = as.numeric(summary(GFSp)["max", ])) 
+GlobalParmsSp$par
+#==================================================#
+##Visualization
+###Uploading respective functions
+source("GlobalFit/BKFitG.R")
+source("GlobalFit/HPFitG.R")
+source("GlobalFit/GlFitG.R")
+source("GlobalFit/NFitG.R")
+source("GlobalFit/JFitG.R")
+source("GlobalFit/TFitG.R")
+source("GlobalFit/MFitG.R")
+source("GlobalFit/SpFitG.R")
+source("GlobalFit/BFitG.R")
+source("GlobalFit/ZFitG.R")
+##Fit function
+GlobalFitVizSp <- function(x){
+  return(rbind(
+    BFitG(x), GlFitG(x),BKFitG(x), HPFitG(x), NFitG(x), TFitG(x), JFitG(x), MFitG(x), SpFitG(x)#, ZFitG(x)  
+  ))
+}
+VizOutSp <- GlobalFitVizSp(GlobalParmsSp$par)
+
+#Calculate R squared
+GlobalGoddnessSp <- VizOutSp %>% group_by(Variable) %>% 
+  summarize(R2 = 1-(sum((Observations-Predictions)^2, na.rm = T)/
+                      (sum((Observations-(mean(Observations, na.rm = T)))^2, na.rm = T))))
+GlobalGoddnessSp$R2adj <- with(GlobalGoddnessSp, 1 - ((1 - R2)*((nrow(VizOut) - 1)/(nrow(VizOut) - 1 - 11))))
+
+ggplot(VizOutSp, aes(Observations, Predictions)) + geom_point(cex = 6, aes(color = Study)) + theme_min + 
+  #geom_text(data = VizAnot, mapping = aes(x = -Inf, y = -Inf, label = label),
+           # hjust = -1.6, vjust = -1, parse = T, cex = 6) +
+  facet_wrap(~Variable, scales = "free") + #, labeller = as_labeller(VizLab, label_parsed)
+  geom_abline(intercept = 0, slope = 1) +
+  theme()
+
+#============================With study of Ziegler 
+##Objective function
+GlobalFitZ <- function(x){
+  return(sum(
+    BO(x), GlO(x), HPO(x), MO(x), TO(x), JO(x), NO(x),  BKO(x), ZO(x) #SpO(x)  
+  ))
+}
+#==================================================#
+Parms = rbind(Im0, Km0, yA0, Em0, m0, g0, ne0, nX10, iX10, te0, tX10, lX10)
+##Optimization
+###First guess by MCMC 
+GFZ <- modMCMC(GlobalFitZ, p = Parms[, 1], 
+                lower = Parms[, 2],
+                upper = Parms[, 3], updatecov = 100, burninlength = 1000, niter = 50000)
+##Estimate
+###Artificial bee-colony algorithm
+GlobalParmsZ <- abc_optim(fn = GlobalFitZ, par = as.numeric(summary(GFZ)["mean", ]), 
+                           lb = as.numeric(summary(GFZ)["min", ]), 
+                           ub = as.numeric(summary(GFZ)["max", ])) 
+GlobalParmsZ$par
+#==================================================#
+##Visualization
+###Uploading respective functions
+source("GlobalFit/BKFitG.R")
+source("GlobalFit/HPFitG.R")
+source("GlobalFit/GlFitG.R")
+source("GlobalFit/NFitG.R")
+source("GlobalFit/JFitG.R")
+source("GlobalFit/TFitG.R")
+source("GlobalFit/MFitG.R")
+source("GlobalFit/SpFitG.R")
+source("GlobalFit/BFitG.R")
+source("GlobalFit/ZFitG.R")
+##Fit function
+GlobalFitVizZ <- function(x){
+  return(rbind(
+    BFitG(x), GlFitG(x),BKFitG(x), HPFitG(x), NFitG(x), TFitG(x), JFitG(x), MFitG(x), ZFitG(x) #SpFitG(x) 
+  ))
+}
+VizOutZ <- GlobalFitVizZ(GlobalParmsZ$par)
+
+#Calculate R squared
+GlobalGoddnessZ <- VizOutZ %>% group_by(Variable) %>% 
+  summarize(R2 = 1-(sum((Observations-Predictions)^2, na.rm = T)/
+                      (sum((Observations-(mean(Observations, na.rm = T)))^2, na.rm = T))))
+GlobalGoddnessZ$R2adj <- with(GlobalGoddnessZ, 1 - ((1 - R2)*((nrow(VizOut) - 1)/(nrow(VizOut) - 1 - 11))))
+
+ggplot(VizOutZ, aes(Observations, Predictions)) + geom_point(cex = 6, aes(color = Study)) + theme_min + 
+  geom_text(data = VizAnot, mapping = aes(x = -Inf, y = -Inf, label = label),
+            hjust = -1.6, vjust = -1, parse = T, cex = 6) +
+  facet_wrap(~Variable, scales = "free") + #, labeller = as_labeller(VizLab, label_parsed)
+  geom_abline(intercept = 0, slope = 1) +
+  theme()
+
+
 
