@@ -1486,6 +1486,7 @@ GlobalFitViz <- function(x){
   ))
 }
 VizOut <- GlobalFitViz(GlobalParmsABC$par)
+write.csv(VizOut, "../Manuscript/figure_data/SimAll.csv", row.names = F)
 
 #Calculate R squared
 GlobalGoddness <- VizOut %>% group_by(Variable) %>% 
@@ -1495,16 +1496,16 @@ GlobalGoddness$R2adj <- with(GlobalGoddness, 1 - ((1 - R2)*((nrow(VizOut) - 1)/(
 
 #Labels and annotation
 VizLab <- c('CO2' = "CO[2]", 'DNA' = "DNA", '14CO2' = "atop(14, )~CO[2]", 'kec' = "italic(k[ec])",
-            '14MBC' = "atop(14, )~MBC", '14S' = "atop(14, )~S", 'S' = "S", 'ATP' = "ATP",
-            'Flush' = "CHCl[3]~flush")
-VizAnot <- data.frame(Variable = as.character(GlobalGoddness$Variable), label = c("R^{2}==0.82", "R^{2}==0.93", "R^{2}==0.14",
-                                                         "R^{2}==0.17", "R^{2}==0.61", "R^{2}==0.65",
-                                                         "R^{2}==0.89", "R^{2}==0.50", "R^{2}==0.64"))
+            '14MBC' = "atop(14, )~CLC", '14S' = "atop(14, )~S", 'S' = "S", 'ATP' = "ATP",
+            'Flush' = "CLC")
+VizAnot <- data.frame(Variable = as.character(GlobalGoddness$Variable), label = c("R^{2}==0.84", "R^{2}==0.93", "R^{2}==0.22",
+                                                         "R^{2}==0.34", "R^{2}==0.57", "R^{2}==0.56",
+                                                         "R^{2}==0.80", "R^{2}==0.49", "R^{2}==0.65"))
 
 ggplot(VizOut, aes(Observations, Predictions)) + geom_point(cex = 6, aes(color = Study)) + theme_min + 
   geom_text(data = VizAnot, mapping = aes(x = -Inf, y = -Inf, label = label),
-            hjust = -1.6, vjust = -1, parse = T, cex = 6) +
-  facet_wrap(~Variable, scales = "free") + #, labeller = as_labeller(VizLab, label_parsed)
+            hjust = -2.5, vjust = -0.5, parse = T, cex = 6) +
+  facet_wrap(~Variable, scales = "free", labeller = as_labeller(VizLab, label_parsed)) + #
   geom_abline(intercept = 0, slope = 1) +
   theme()
 
