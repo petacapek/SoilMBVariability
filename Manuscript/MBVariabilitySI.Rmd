@@ -201,9 +201,9 @@ grid.arrange(
   ggplot(GlData, aes(Time, Flush)) + geom_point(cex=6, pch=21, aes(fill = Substrate)) +
   theme_min + ylab(expression(paste("CLC (pmo", l^{14},C~g(DW)^{-1}, ")"))) + xlab("Time (days)") + 
   theme(legend.position = c(0.6, 0.8), legend.title = element_blank()) + 
-  scale_fill_manual(values = c("white", "grey")) +
+  scale_fill_manual(label = c("Alanine", "Glucose"), values = c("white", "grey")) +
   geom_line(data = GlSim, aes(Time, Flush, color = Substrate), lwd = 1.2) +
-  scale_color_manual(values = c("grey30", "black")) + ggtitle("A)"),
+  scale_color_manual(label = c("Alanine", "Glucose"), values = c("grey30", "black")) + ggtitle("A)"),
   ggplot(GlData, aes(Time, CO2)) + geom_point(cex=6, pch=21, aes(fill = Substrate), show.legend = F) +
   theme_min + ylab(expression(paste(CO[2], " (pmo", l^{14},C~g(DW)^{-1}, ")"))) + xlab("Time (days)") + 
   theme(legend.position = c(0.8, 0.4), legend.title = element_blank()) + 
@@ -533,7 +533,7 @@ nrow = 2
 **Table S1:** Parameters of mathematical model described in section 2.1.1. Mathematical model in the main text that were used to fit data shown on Fig. 1A.
 
 | Parameter                                 | Value                 | Unit                         |
-|-------------------------------------------|-----------------------|------------------------------|
+|--------------------------------|------------------|----------------------|
 | Basal biomass (B)                         | 0.14                  | mg                           |
 | z ($\frac{I_m \times y_A}{G_m}$)          | 1.25                  | unitless                     |
 | Growth costs (g)                          | 0.21                  | $mg(C)~mg(B)^{-1}$           |
