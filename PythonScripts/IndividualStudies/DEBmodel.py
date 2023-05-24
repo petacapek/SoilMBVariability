@@ -15,12 +15,13 @@ def DEBmodel (y, t, pars):
     uptake=Im*X1*f
     assimilation = Im*yA*f #X1 specific
     mobilization = Im*yA*E/Em
-    growth = (mobilization - m)/(1 + g + E) 
+    growth = max(0, (mobilization - m)/(1 + g)) 
+    recycling = max(0, -(mobilization - m)*(1 + g)) 
     
     #Define derivatives
     dSdt = -uptake
-    dEdt = assimilation - mobilization
-    dX1dt = X1*(max(0, growth) + min(0, growth*(1+g)))
-    dCO2dt = uptake*(1 - yA) + X1*(max(growth*g, 0) + m)
+    dEdt = assimilation - mobilization - (growth - recycling)*E
+    dX1dt = X1*(growth - recycling)
+    dCO2dt = uptake*(1 - yA) + X1*(growth*g + m)
          
     return dSdt, dEdt, dX1dt, dCO2dt;

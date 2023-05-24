@@ -2,7 +2,7 @@ NFitG<-function(x){
   #==========================Extracting sampling time from the dataset
   times <- as.numeric(NData[NData$Treatment=="A", "Time"])
   #==========================Defining initial conditions that are passed to model
-  E0 = max(x[5]*x[4]/x[1]/x[3], 1e-12)
+  E0 = 1e-12
   X10A = with(subset(NData, Treatment == "A"), ATPinit/(x[11] + x[10]*E0))[1]
   y0A <- c(as.numeric(NData[NData$Treatment=="A", "Sinit"])[1], E0, X10A, 0)
   X10B = with(subset(NData, Treatment == "B"), ATPinit/(x[11] + x[10]*E0))[1]

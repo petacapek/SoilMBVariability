@@ -3,7 +3,7 @@ GlFitG<-function(x){
   times <- as.numeric(GlData[GlData$Substrate=="Glucose", c("Time")])
   #==========================Defining initial conditions that are passed to model
   ##Eu is estimated
-  Eu0 = max(x[5]*x[4]/x[1]/x[3], 1e-12)
+  Eu0 = 1e-12
   ##X1u is the initial chloroform labile C with Eu subtracted and corrected for incomplete extraction
   X1u0 = GlData$Cmicinit[1]/(x[8] + x[7]*Eu0)
   y0 <- c(GlData$Sinit[1]/1000, 0, 0, 0, Eu0, X1u0)

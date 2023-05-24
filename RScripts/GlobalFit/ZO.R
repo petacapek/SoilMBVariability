@@ -3,7 +3,7 @@ ZO<-function(x){
   times <- as.numeric(ZData[, c("Time")])
   #==========================Defining initial conditions that are passed to model
   ##Eu at time zero is set to equal to m*Em/Im/yA so it can meet the maintenance costs
-  Eu0 = max(x[5]*x[4]/x[1]/x[3], 1e-12)
+  Eu0 = 1e-12
   ##X1u is the initial chloroform labile C with Eu subtracted and corrected for incomplete extraction
   X1u0 = ZData$PLFAinit[1]/x[12]
   y0 <- c(ZData$Sinit[1], 0, 0, 0, Eu0, X1u0)

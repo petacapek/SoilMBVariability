@@ -24,17 +24,18 @@ def DEBmodelIso (y, t, pars):
     uptake=Im*X1*f #labelled substrate only
     assimilation = Im*yA*f #X1 specific
     mobilization = Im*yA*E/Em
-    growth = (mobilization - m)/(1 + g + E) 
+    growth = max((mobilization - m)/(1 + g), 0)
+    recycling = max(0, -(mobilization - m)*(1 + g))
     
     #Define derivatives
     ##Labelled pools
     dSldt = -uptake
-    dEldt = assimilation - mobilization*Eatm
-    dX1ldt = X1*(max(0, growth*Eatm) + min(0, growth*(1+g)*X1atm))
-    dCO2ldt = uptake*(1 - yA) + X1*(max(growth*g*Eatm, 0) - min(0, growth*(1+g)*X1atm) + (m + min(0, growth*(1+g)*X1atm))*Eatm)
+    dEldt = assimilation - mobilization*Eatm - (growth - recycling)*El
+    dX1ldt = X1*(growth*Eatm - recycling*X1atm)
+    dCO2ldt = uptake*(1 - yA) + X1*(growth*g*Eatm + recycling*X1atm + (m - recycling)*Eatm)
     ##Unabelled pools
     #dSudt
-    dEudt = - mobilization*(1 - Eatm)
-    dX1udt = X1*(max(0, growth*(1 - Eatm)) + min(0, growth*(1+g)*(1 - X1atm))) 
+    dEudt = - mobilization*(1 - Eatm) - (growth - recycling)*Eu
+    dX1udt = X1*(growth*(1 - Eatm) - recycling*(1 - X1atm)) 
         
     return dSldt, dEldt, dX1ldt, dCO2ldt, dEudt, dX1udt;

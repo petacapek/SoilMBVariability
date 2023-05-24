@@ -27,6 +27,7 @@ library(rcompanion)
 library(optimx)
 library(reticulate)
 library(gridExtra)
+devtools::install_github("gadenbuie/ggpomological")
 library(ggpomological)
 #ggplot theme
 theme_min<-theme(axis.text.x=element_text(vjust=0.2, size=18, colour="black"),
@@ -266,7 +267,7 @@ Acknowledging all these aspects could potentially increase accuracy of Sub-micro
 **Table 1:** List of symbols of Sub-microbial model. Explanation and units are reported for each symbol. Parameters marked by symbol '\*' and '$\ddagger$' are subject of calibration performed in individual studies and across studies, respectively (see section 2.3. Model calibration and statistical analyses for details).
 
 |      **Symbol**       |                           **Explanation**                            |                    **Unit**                     |
-|:---------------------:|:--------------------------------------------------------------------:|:-----------------------------------------------:|
+|:--------------:|:-------------------------------:|:---------------------:|
 |       **Pools**       |                                                                      |                                                 |
 |           S           |                          Organic substrate                           |             $\mu mol(C)~g(DW)^{-1}$             |
 |           B           |                            Basal biomass                             |             $\mu mol(C)~g(DW)^{-1}$             |
@@ -302,7 +303,7 @@ Acknowledging all these aspects could potentially increase accuracy of Sub-micro
 **Table 2:** Capability (reported as $R^2$) of sub-microbial model to explain variability in different data products (see Table 1 for explanation of the abbreviations) reported in 11 studies. Studies are divided into two categories - studies supplying either isotope-labelled or unlabelled substrate. Substrate identity is reported in the table. The $R^2$ is reported separately for the model fit to data reported in individual studies and to all data combined together.
 
 | Study                          | Substrate | Variable                 |              |                                |          |                   |      |
-|--------------------------------|-----------|--------------------------|--------------|--------------------------------|----------|-------------------|------|
+|---------|---------|---------|---------|---------|---------|---------|---------|
 | Labelled substrate             |           |                          |              |                                |          |                   |      |
 |                                |           | ${}^{14}S$ or ${}^{13}S$ | ${}^{14}CLC$ | ${}^{14}CO_2$ or ${}^{13}CO_2$ | $k_{ec}$ | ${}^{13}C_{PLFA}$ |      |
 | Glanville et al. (2016)        | Glucose   |                          | 0.85         | 0.99                           | 0.77     |                   |      |
@@ -328,7 +329,7 @@ ${}^{\ddagger}$Studies of Sparling et al. (1988 and 1990) and Ziegler et al. (20
 **Table 3:** Parameters (see Table 1 for explanation of symbols) of sub-microbial model calibrated either separately against data reported reported in 11 different studies or against all data combined${}^{\ddagger}$. Best parameters and thier standard deviations are reported.
 
 | Study                         | Substrate | $I_m$           | $K_m$           | $y_A$                                         | $G_m$                                         | m                                             | g                              | $n_G$           | $n_{B}$         | $i_B$              | $t_G$                                         | $t_B$                                         | $p_B$                                         | $W_G$           | $W_B$           |
-|-------------------------------|-----------|-----------------|-----------------|-----------------------------------------------|-----------------------------------------------|-----------------------------------------------|--------------------------------|-----------------|-----------------|--------------------|-----------------------------------------------|-----------------------------------------------|-----------------------------------------------|-----------------|-----------------|
+|-----|-----|-----|-----|-----|-----|-----|-----|-----|-----|-----|-----|-----|-----|-----|-----|
 | Glanville et al. (2016)       | Glucose   | $13.5 \pm 3.37$ | $0.12 \pm 0.22$ | $0.94 \pm 0.05$                               | $6.39 \pm 1.23$                               | $8.15 \times 10^{-4} \pm 3.07 \times 10^{-4}$ | $0.15 \pm 0.09$                | $0.43 \pm 0.03$ | $0.28 \pm 0.02$ |                    |                                               |                                               |                                               |                 |                 |
 |                               | Alanine   | $9.86 \pm 3.33$ | $0.11 \pm 0.10$ | $0.89 \pm 0.06$                               | $4.57 \pm 1.61$                               | $1.24 \times 10^{-3} \pm 1.55 \times 10^{-3}$ | $0.29 \pm 0.12$                | $0.36 \pm 0.02$ | $0.27 \pm 0.02$ |                    |                                               |                                               |                                               |                 |                 |
 | Sparling et al. (1988, 1990)  | Glucose   | $0.11 \pm 0.04$ | $0.15 \pm 0.13$ | $0.67 \pm 0.05$                               | $0.76 \pm 0.79$                               | $6.21 \times 10^{-7} \pm 5.08 \times 10^{-7}$ | $0.02 \pm 4.58 \times 10^{-3}$ | $0.42 \pm 0.10$ | $0.15 \pm 0.06$ |                    |                                               |                                               |                                               |                 |                 |
@@ -347,7 +348,7 @@ ${}^{\ddagger}$Studies of Sparling et al. (1988 and 1990) and Ziegler et al. (20
 **Table 4:** Comparison of goodness of fit of three different microbially-explicit models (Sub-microbial, Monod and Pirt). Normalized (across different data products) residual sum of squares ($SS_{res}^{normalized}$), number of model parameters ($N_{par}$), and number of observations ($N_{obs}$), against which the models are calibrated, are reported in the table. F value expresses the difference between $SS_{res}^{normalized}$ calculated for Sub-microbial model and Monod or Pirt model given the number of model parameters and number of observations (see eq. 19). The positive value means the decrease of $SS_{res}^{normalized}$ (i.e. better model fit). p value expresses the probability that the difference in $SS_{res}^{normalized}$ is accidental.
 
 | Study                         | Model         | $SS_{res}^{normalized}$ | $N_{par}$ | $N_{obs}$ | F     | p       |
-|-------------------------------|---------------|-------------------------|-----------|-----------|-------|---------|
+|-------------|----------|----------|----------|----------|----------|----------|
 | Ziegler et al. (2005)         | Sub-microbial | 6.51                    | 7         | 16        |       |         |
 |                               | Pirt          | 2.82                    | 6         | 16        | -5.10 | 1       |
 |                               | Monod         | 3.77                    | 6         | 16        | -1.89 | 1       |
@@ -441,9 +442,9 @@ SimAll <- read.csv("../Manuscript/figure_data/SimAll.csv")
 VizLab <- c('CO2' = "CO[2]", 'DNA' = "DNA", '14CO2' = "atop(14, )~CO[2]", 'kec' = "italic(k[ec])",
             '14MBC' = "atop(14, )~CLC", '14S' = "atop(14, )~S", 'S' = "S", 'ATP' = "ATP",
             'Flush' = "CLC")
-VizAnot <- data.frame(Variable = as.character(unique(SimAll$Variable)), label = c("R^{2}==0.84", "R^{2}==0.93", "R^{2}==0.22",
-                                                         "R^{2}==0.34", "R^{2}==0.57", "R^{2}==0.56",
-                                                         "R^{2}==0.80", "R^{2}==0.49", "R^{2}==0.65"))
+VizAnot <- data.frame(Variable = as.character(unique(SimAll$Variable)), label = c("R^{2}==0.84", "R^{2}==0.93", "R^{2}==0.21",
+                                                         "R^{2}==0.37", "R^{2}==0.62", "R^{2}==0.60",
+                                                         "R^{2}==0.88", "R^{2}==0.49", "R^{2}==0.64"))
 
 ggplot(SimAll, aes(Observations, Predictions)) + geom_point(cex = 6, aes(color = Study)) + theme_min + 
   geom_text(data = VizAnot, mapping = aes(x = -Inf, y = -Inf, label = label),

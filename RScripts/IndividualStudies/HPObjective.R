@@ -3,9 +3,9 @@ HPObjective<-function(x){
   times <- as.numeric(HPData[, c("Time")])
   #==========================Defining initial conditions that are passed to model
   ##Eu at time zero is set to equal to m*Em/Im/yA so it can meet the maintenance costs
-  Eu0 = x[4]*x[5]/x[1]/x[3]
+  Eu0 = 1e-25
   ##X1u is the initial chloroform labile C with Eu subtracted and corrected for incomplete extraction
-  X1u0 = HPData$Cmicinit[1]/(x[8] + x[7]*Eu0)#!Cmicinit is in nmols
+  X1u0 = HPData$Cmicinit[1]/(x[8])
   y0 <- c(HPData$Sinit[1], 0, 0, 0, Eu0, X1u0)
   #==========================Running simulation
   Yhat <- Sparling1990ODESolv(DEBmodelIso, x, times, y0)

@@ -14,6 +14,7 @@ library(ABCoptim)
 library(rcompanion)
 library(optimx)
 library(reticulate)
+library(latex2exp)
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
 #ggplot theme
 theme_min<-theme(axis.text.x=element_text(vjust=0.2, size=18, colour="black"),
@@ -104,7 +105,7 @@ ParmsGlanvilleGlucose <- abc_optim(fn = GlObjectiveGlucose,
                                    par = as.numeric(summary(GlP1)[c("mean"), ]), 
                                    lb = as.numeric(summary(GlP1)[c("min"), ]), 
                                    ub = as.numeric(summary(GlP1)[c("max"), ]))
-ParmsGlanvilleGlucose$par
+round(ParmsGlanvilleGlucose$par, 6)
 ##Uncertainty
 GlPsd <- modMCMC(GlObjectiveGlucose, p = ParmsGlanvilleGlucose$par, lower = Parms[1:8, 2], 
                  upper = Parms[1:8, 3], niter = 5000)
@@ -232,7 +233,7 @@ ParmsSparling90 <- abc_optim(fn = SpObjective,
                              lb = as.numeric(summary(SpP)[c("min"), ]), 
                              ub = as.numeric(summary(SpP)[c("max"), ]))
 
-ParmsSparling90$par
+round(ParmsSparling90$par, 6)
 #Uncertainty
 SpPu <- modMCMC(SpObjective, p = ParmsSparling90$par, lower = Parms[1:8, 2], upper = Parms[1:8, 3], niter = 5000)
 summary(SpPu)
@@ -298,7 +299,7 @@ ParmsSantruckova2004 <- abc_optim(fn = HPObjective,
                                   par = as.numeric(summary(HPP)[c("mean"), ]), 
                                   lb = as.numeric(summary(HPP)[c("min"), ]), 
                                   ub = as.numeric(summary(HPP)[c("max"), ]))
-ParmsSantruckova2004$par
+round(ParmsSantruckova2004$par, 6)
 #Uncertainty
 HPPU <- modMCMC(HPObjective, p = ParmsSantruckova2004$par, 
                 lower = Parms[1:8, 2], upper = Parms[1:8, 3], niter = 5000)
@@ -471,7 +472,7 @@ ParmsMarstorp1999 <- abc_optim(fn = MObjective,
                                par = as.numeric(summary(MP)[c("mean"), ]), 
                                lb = as.numeric(summary(MP)[c("min"), ]), 
                                ub = as.numeric(summary(MP)[c("max"), ])) 
-ParmsMarstorp1999$par
+round(ParmsMarstorp1999$par, 6)
 ##Uncertainty
 MPU <- modMCMC(MObjective, p = ParmsMarstorp1999$par, 
               lower = c(Parms[1:8, 2], 0),
@@ -635,7 +636,7 @@ ParmsZiegler2014 <- abc_optim(fn = ZObjective,
                                par = as.numeric(summary(ZP)[c("mean"), ]), 
                                lb = as.numeric(summary(ZP)[c("min"), ]), 
                                ub = as.numeric(summary(ZP)[c("max"), ])) 
-ParmsZiegler2014$par
+round(ParmsZiegler2014$par, 6)
 ##Uncertainty
 ZPU <- modMCMC(ZObjective, p = ParmsZiegler2014$par, 
               lower = c(Parms[1:6, 2], 0),
@@ -793,7 +794,7 @@ ParmsTsai1997 <- abc_optim(fn = TObjective,
                               par = as.numeric(summary(TP)[c("mean"), ]), 
                               lb = as.numeric(summary(TP)[c("min"), ]), 
                               ub = as.numeric(summary(TP)[c("max"), ])) 
-ParmsTsai1997$par
+round(ParmsTsai1997$par, 6)
 ##Uncertainty
 TPU <- modMCMC(TObjective, p = ParmsTsai1997$par, 
               lower = c(Parms[1:8, 2], 0, 0),
@@ -961,7 +962,7 @@ ParmsJoerg2002 <- abc_optim(fn = JObjective,
                            par = as.numeric(summary(JP)[c("mean"), ]), 
                            lb = as.numeric(summary(JP)[c("min"), ]), 
                            ub = as.numeric(summary(JP)[c("max"), ])) 
-ParmsJoerg2002$par
+round(ParmsJoerg2002$par, 6)
 ##Uncertainty
 JPU <- modMCMC(JObjective, p = ParmsJoerg2002$par, 
               lower = c(Parms[1:8, 2], 0, 0),
@@ -1121,7 +1122,7 @@ ParmsNanni1977 <- abc_optim(fn = NObjective,
                             par = as.numeric(summary(NP)[c("mean"), ]), 
                             lb = as.numeric(summary(NP)[c("min"), ]), 
                             ub = as.numeric(summary(NP)[c("max"), ])) 
-ParmsNanni1977$par
+round(ParmsNanni1977$par, 6)
 ##Uncertainty
 NPU <- modMCMC(NObjective, p = ParmsNanni1977$par, 
               lower = c(Parms[1:6, 2], 1, 1, 0, 0),
@@ -1279,7 +1280,7 @@ ParmsBlag2014 <- abc_optim(fn = BObjective,
                             par = as.numeric(summary(BP)[c("mean"), ]), 
                             lb = as.numeric(summary(BP)[c("min"), ]), 
                             ub = as.numeric(summary(BP)[c("max"), ])) 
-ParmsBlag2014$par
+round(ParmsBlag2014$par, 6)
 ##Uncertainty
 BPU <- modMCMC(BObjective, p = ParmsBlag2014$par, 
               lower = c(Parms[1:6, 2], 0),
@@ -1403,11 +1404,11 @@ ggplot(BData, aes(Time, DNA)) + geom_point(cex=6, pch=21, fill = "grey") + facet
 ##Parameters, which will be optimized (Initial guess, lower and upper bound) 
 Im0 = c(mean(parsAll$Im), min(parsAll$Im), max(parsAll$Im)) #1
 Km0 = c(mean(parsAll$Km), min(parsAll$Km), max(parsAll$Km)) #2
-yA0 = c(mean(parsAll$yA[-10]), min(parsAll$yA), max(parsAll$yA)) #3
+yA0 = c(mean(parsAll$yA), min(parsAll$yA), max(parsAll$yA)) #3
 Em0 = c(mean(parsAll$Em), min(parsAll$Em), max(parsAll$Em)) #4
 m0 = c(mean(parsAll$m), min(parsAll$m), max(parsAll$m))     #5
 g0 = c(mean(parsAll$g), min(parsAll$g), max(parsAll$g))     #6
-ne0 = c(mean(parsAll$ne[-6], na.rm = T), min(parsAll$ne, na.rm = T), max(parsAll$ne, na.rm = T)) #7
+ne0 = c(mean(parsAll$ne, na.rm = T), min(parsAll$ne, na.rm = T), max(parsAll$ne, na.rm = T)) #7
 nX10 = c(mean(parsAll$nX1, na.rm = T), min(parsAll$nX1, na.rm = T), max(parsAll$nX1, na.rm = T)) #8
 iX10 = c(mean(parsAll$iX1, na.rm = T), 1e-4, 0.1)           #9
 te0 = c(mean(parsAll$te, na.rm = T), min(parsAll$te, na.rm = T), max(parsAll$te, na.rm = T)) #10
@@ -1465,7 +1466,7 @@ GF <- modMCMC(GlobalFit, p = Parms[, 1],
 GlobalParmsABC <- abc_optim(fn = GlobalFit, par = as.numeric(summary(GF)["mean", ]), 
                             lb = as.numeric(summary(GF)["min", ]), 
                             ub = as.numeric(summary(GF)["max", ])) 
-GlobalParmsABC$par
+round(GlobalParmsABC$par, 6)
 #==================================================#
 ##Visualization
 ###Uploading respective functions
@@ -1498,9 +1499,9 @@ GlobalGoddness$R2adj <- with(GlobalGoddness, 1 - ((1 - R2)*((nrow(VizOut) - 1)/(
 VizLab <- c('CO2' = "CO[2]", 'DNA' = "DNA", '14CO2' = "atop(14, )~CO[2]", 'kec' = "italic(k[ec])",
             '14MBC' = "atop(14, )~CLC", '14S' = "atop(14, )~S", 'S' = "S", 'ATP' = "ATP",
             'Flush' = "CLC")
-VizAnot <- data.frame(Variable = as.character(GlobalGoddness$Variable), label = c("R^{2}==0.84", "R^{2}==0.93", "R^{2}==0.22",
-                                                         "R^{2}==0.34", "R^{2}==0.57", "R^{2}==0.56",
-                                                         "R^{2}==0.80", "R^{2}==0.49", "R^{2}==0.65"))
+VizAnot <- data.frame(Variable = as.character(GlobalGoddness$Variable), label = c("R^{2}==0.84", "R^{2}==0.93", "R^{2}==0.21",
+                                                         "R^{2}==0.37", "R^{2}==0.62", "R^{2}==0.60",
+                                                         "R^{2}==0.88", "R^{2}==0.49", "R^{2}==0.64"))
 
 ggplot(VizOut, aes(Observations, Predictions)) + geom_point(cex = 6, aes(color = Study)) + theme_min + 
   geom_text(data = VizAnot, mapping = aes(x = -Inf, y = -Inf, label = label),
@@ -1513,7 +1514,7 @@ ggplot(VizOut, aes(Observations, Predictions)) + geom_point(cex = 6, aes(color =
 GFf <- modMCMC(GlobalFit, p = GlobalParmsABC$par, 
                lower = Parms2[, 2],
                upper = Parms2[, 3], updatecov = 100, burninlength = 1000, niter = 50000)
-summary(GFf)
+summary(GFf)["sd", ]
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~Herbert 1961~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
@@ -1650,8 +1651,7 @@ ggplot(HEData, aes(x = SGR)) + geom_point(cex = 6, pch = 21, aes(y = Mass, fill 
   geom_line(data = HEPreds, aes(SGR, Mass), lwd = 1, color = "grey60") +
   geom_line(data = HEPreds, aes(SGR, DNA*5), lwd = 1, color = "black") +
   geom_line(data = HEPreds, aes(SGR, RNA*5), lwd = 1, color = "grey") +
-  geom_line(data = HEPreds, aes(SGR, Protein), lwd = 1, color = "black") +
-  ggtitle("A)")
+  geom_line(data = HEPreds, aes(SGR, Protein), lwd = 1, color = "black")
 
 #==================Growth rate - E/Em relationship
 #Parameters
@@ -1867,4 +1867,92 @@ ggplot(VizOutZ, aes(Observations, Predictions)) + geom_point(cex = 6, aes(color 
   theme()
 
 
+#====================================================Response to reviewers comments
+OdeDEB<-function(time, state, pars){
+  
+  with(as.list(c(state, pars)),{
+    #Scaling function f
+    f = S/(Km + S)
+    #Fluxes
+    uptake=Im*B*f
+    assimilation = Im*yA*f #X1 specific
+    mobilization = Im*yA*G/Gm
+    growth = pmax(0, (mobilization - m)/(1 + g))
+    recycling = pmin(0, (mobilization - m)*(1 + g))
+    
+    #Derivatives
+    dS = -uptake
+    dG = assimilation - mobilization - growth*G + recycling*G
+    dB = B*(growth - recycling)
+    dCO2 = uptake*(1 - yA) + B*(growth*g + m)
+    
+    return(list(c(dS, dG, dB, dCO2), uptake = uptake, assimilation = assimilation, mobilization = mobilization, 
+                growth = growth, respiration = uptake*(1 - yA) + B*(growth*g + m), MB = B*(1 + G),
+                BG = B*G))
+    
+  })
+}
 
+outDEB <- ode(y=c(S = 100, G=1e-9, B=10, CO2 = 0), 
+              parms=c(Im = 6.49, Km = 221, yA = 0.99, Gm = 3.01, m = 0.000411, g = 2.074687), 
+              OdeDEB, times=seq(0, 7, by = 0.1))
+plot(outDEB)
+outDEB <- as.data.frame(outDEB)
+
+#1. Plotting changes in pools over time in one figure
+outPools1 <- outDEB[, c("time", "S", "CO2", "MB")]
+outPools1 <- melt(outPools1, id.vars = c("time"))  
+  
+ggplot(outPools1, aes(time, value)) + geom_line(aes(color = variable, linetype = variable), lwd = 1) + theme_min + xlab("Time (days)") + 
+  ylab(expression(paste("Pools concentration (", mu, "mol (C) ", g~(DW)^{-1}, ")"))) +
+  scale_color_manual(values = c("grey", "grey", "black"), 
+                     labels = c("S", TeX("$CO_{2}$"), TeX("$B \\times (1 + G)$"))) +
+  scale_linetype_manual(values = c(1, 2, 1), 
+                     labels = c("S", TeX("$CO_{2}$"), TeX("$B \\times (1 + G)$"))) +
+  theme(legend.title = element_blank(), legend.text.align = 0, legend.position = c(0.85, 0.85), 
+        legend.background = element_blank(), legend.key.height = unit(0.8, "cm"))
+
+#2. Plotting changes in B, G, and SGR over
+ggplot(outDEB, aes(x = time)) + geom_line(lwd=1, aes(y = B, color = "B", linetype = "B")) +
+  geom_line(lwd = 1, aes(y = G*100, color = "G", linetype = "G")) +
+  geom_line(lwd = 1, aes(y = growth*100, color = "mu", linetype = "mu")) +
+  scale_y_continuous(sec.axis = sec_axis(~./100,
+                                         name = expression(paste("G and Specific growth rate (relative to B)")))) + 
+  theme_min + 
+  labs(y = expression(paste("B (", mu, "mol(C) " , g^{-1}, "(DW))")),
+       x = expression(paste("Time (days)")),
+       color = "Variable", linetype = "Variable") +
+  scale_color_manual(values = c("black", "black", "grey"), 
+                     labels = c(expression("B"),
+                                expression("G"),
+                                expression("Specific growth rate"))) +
+  scale_linetype_manual(values = c(1, 2, 1), 
+                     labels = c(expression("B"),
+                                expression("G"),
+                                expression("Specific growth rate"))) +
+  theme(legend.title = element_blank(), legend.position = c(0.8, 0.9),
+        legend.text.align = 0, legend.background = element_blank(), legend.key.height = unit(0.8, "cm")) 
+
+#3. Plotting changes in biomass composition
+outDEB$DNA <- with(outDEB, 0.063/(1 + G))
+outDEB$RNA <- with(outDEB, (0.058 + 0.21*G)/(1 + G))
+outDEB$Proteins <- with(outDEB, (0.64 + 0.53*G)/(1 + G))
+
+ggplot(outDEB, aes(x = time)) + geom_line(lwd=1, aes(y = Proteins, color = "Proteins", linetype = "Proteins")) +
+  geom_line(lwd = 1, aes(y = DNA*6, color = "DNA", linetype = "DNA")) +
+  geom_line(lwd = 1, aes(y = RNA*6, color = "RNA", linetype = "RNA")) +
+  scale_y_continuous(sec.axis = sec_axis(~./6,
+                                         name = expression(paste("DNA and RNA abundance (unitless)")))) + 
+  theme_min + 
+  labs(y = expression(paste("Protein abundance (unitless)")),
+       x = expression(paste("Time (days)")),
+       color = "Variable", linetype = "Variable") +
+  scale_color_manual(values = c("black", "black", "grey"), 
+                     labels = c(expression("Proteins"),
+                                expression("DNA"),
+                                expression("RNA"))) +
+  scale_linetype_manual(values = c(1, 2, 1), 
+                        labels = c(expression("Proteins"),
+                                   expression("DNA"),
+                                   expression("RNA"))) +
+  theme(legend.title = element_blank(), legend.position = c(0.85, 0.6)) 
