@@ -25,7 +25,7 @@ def DEBmodelIso (y, t, pars):
     assimilation = Im*yA*f #X1 specific
     mobilization = Im*yA*E/Em
     growth = max((mobilization - m)/(1 + g), 0)
-    recycling = max(0, -(mobilization - m)*(1 + g))
+    recycling = max(0, -(mobilization - m))
     
     #Define derivatives
     ##Labelled pools

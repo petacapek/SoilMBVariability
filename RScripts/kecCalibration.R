@@ -1956,3 +1956,42 @@ ggplot(outDEB, aes(x = time)) + geom_line(lwd=1, aes(y = Proteins, color = "Prot
                                    expression("DNA"),
                                    expression("RNA"))) +
   theme(legend.title = element_blank(), legend.position = c(0.85, 0.6)) 
+
+#=======================Spohn and Widdig 2017
+Spohn <- read.csv("../SoilMBVariabilityData/Spohn2017.csv", sep = ";")
+
+ggplot(Spohn, aes(DNA, MBC)) + geom_point(pch = 21, cex= 6, aes(fill = Study)) + theme_min
+
+Spohn$CLC <- Spohn$MBC*0.45/12.01
+Spohn$CDNA <- Spohn$DNA*0.51/12.01
+
+ggplot(Spohn, aes(CDNA, CLC)) + geom_point(pch = 21, cex= 6, fill = "grey") + theme_min
+
+summary(lm(MBC~DNA, Spohn[Spohn$Study=="Spohn and Widdig, 2017", ]))
+summary(lm(MBC~DNA, Spohn[Spohn$Study=="Anderson and Martens, 2013", ]))
+summary(lm(CLC~CDNA, Spohn))
+
+summary(Spohn)
+
+dna <- seq(0, 8, by = 0.01)
+MBCl <- dna/0.06
+MBCh <- dna/(0.06/4)
+CLCl <- MBCl*0.24
+CLCh <- MBCh*(0.24 + 3*0.41)/(1 + 3)
+
+dna_ug <- dna*12.01/0.51
+mbc_ugl <- CLCl*12.01/0.45
+mbc_ugh <- CLCh*12.01/0.45
+Spohn_pred <- data.frame(dna_ug, mbc_ugh, mbc_ugl)
+
+ggplot(Spohn, aes(DNA, MBC)) + geom_point(pch = 21, cex= 6, aes(fill = Study)) + theme_min +
+  geom_line(data = Spohn_pred, aes(dna_ug, mbc_ugl), lwd = 1.5, color = "grey") +
+  geom_line(data = Spohn_pred, aes(dna_ug, mbc_ugh), lwd = 1.5, color = "grey") +
+  scale_y_log10(limits = c(10, 3000)) + scale_x_log10(limits = c(1, 150)) +
+  theme(legend.position = c(0.25, 0.85), legend.title = element_blank()) +
+  ylab(expression(paste("MBC (", mu, "g ", g(DW)^{-1}, ")"))) +
+  xlab(expression(paste("DNA (", mu, "g ", g(DW)^{-1}, ")")))
+  
+
+summary(lm(mbc_ugl~dna_ug))
+summary(lm(mbc_ugh~dna_ug))
